@@ -25,10 +25,10 @@
 
     <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-left">
-            <img src="assets/img/profile.png" alt="" class="nav-avatar" />
+        <a href="index.html" class="nav-left" style="text-decoration:none; color:inherit;">
+            <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
             <span class="nav-brand">nIcO v99</span>
-        </div>
+        </a>
         <div class="nav-links">
             <a href="index.html" class="nav-link">Home</a>
             <a href="settings.html" class="nav-link active">Settings</a>
@@ -47,8 +47,10 @@
         </div>
 
         <h1 class="settings-page-title" style="margin-top: 40px;">Keybinds</h1>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">Hover over highlighted keys to see
+            their bindings</p>
 
-        <div class="keybinds-grid" id="keybindsGrid">
+        <div class="keyboard-wrap" id="keyboardWrap">
             <div class="settings-loading">
                 <div class="spinner"></div>
                 <span>Loading keybinds…</span>
