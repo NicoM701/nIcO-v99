@@ -14,16 +14,11 @@
   <meta property="og:url" content="https://nicov99.com/" />
   <meta property="og:type" content="website" />
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="nIcO v99" />
-  <meta name="twitter:description" content="CS2 Player | Settings, Configs & Links" />
-  <meta name="twitter:image" content="assets/img/profile.png" />
-
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="assets/img/profile.png" />
@@ -38,98 +33,126 @@
     <img src="assets/bg/wavez.gif" alt="" class="bg-video" />
   </div>
 
-  <!-- Main Content -->
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <img src="assets/img/profile.png" alt="" class="nav-avatar" />
+      <span class="nav-brand">nIcO v99</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Home</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </div>
+  </nav>
+
+  <!-- Main Content — Two Column -->
   <main class="main-container">
+    <div class="hero-layout">
 
-    <!-- ===== 3D INTERACTIVE CARD ===== -->
-    <section class="card-section">
-      <div class="tilt-container" id="tiltContainer">
-        <div class="profile-card" id="profileCard">
-          <!-- Glow layer -->
-          <div class="card-glow" id="cardGlow"></div>
+      <!-- LEFT: 3D Card -->
+      <div class="hero-left">
+        <div class="tilt-container" id="tiltContainer">
+          <div class="profile-card" id="profileCard">
+            <div class="card-glow" id="cardGlow"></div>
 
-          <!-- Profile picture (3D elevated) -->
-          <div class="card-layer card-layer--avatar" id="layerAvatar">
-            <img src="assets/img/profile.png" alt="nIcO v99" class="avatar" />
-          </div>
+            <!-- Info layer (closest to background) -->
+            <div class="card-layer card-layer--info" id="layerInfo">
+              <h1 class="username">nIcO v99</h1>
+              <p class="tagline" id="userTagline">Nico · <span id="userAge"></span> · Germany</p>
+            </div>
 
-          <!-- Info layer (3D elevated more) -->
-          <div class="card-layer card-layer--info" id="layerInfo">
-            <h1 class="username">nIcO v99</h1>
-            <p class="tagline">CS2 Player</p>
-          </div>
-
-          <!-- Social icons layer (3D top) -->
-          <div class="card-layer card-layer--socials" id="layerSocials">
-            <div class="social-links">
-              <a href="https://steamcommunity.com/id/nIcOv99/" target="_blank" rel="noopener" class="social-link" aria-label="Steam" title="Steam">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.06 2 11.04c0 2.34 1.01 4.46 2.64 6.04l1.67-4.18c.07-.18.22-.33.39-.42l3.05-1.53c.24-.12.51-.08.71.09l2.15 1.72 3.24-2.43c.35-.26.83.03.77.47l-.56 4.03 3.89-1.95V11.04C20 6.06 17.52 2 12 2zm-1.13 14.82l-1.44.72c.59.55 1.38.89 2.24.89 1.8 0 3.26-1.46 3.26-3.26 0-.34-.05-.67-.15-.98l-1.55.78a1.84 1.84 0 01-2.36-2.08l-1.55.78a3.26 3.26 0 011.55 3.15z"/></svg>
-              </a>
-              <a href="#" target="_blank" rel="noopener" class="social-link" aria-label="Discord" title="Discord">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.211.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.369a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.056 19.9 19.9 0 005.993 3.029.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.029.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.946 2.418-2.157 2.418z"/></svg>
-              </a>
-              <a href="#" target="_blank" rel="noopener" class="social-link" aria-label="FACEIT" title="FACEIT">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.999 2.705L12.568 24H5.153l6.012-11.235L5.146 0h7.414l2.982 5.588L23.999 2.705z"/></svg>
-              </a>
-              <a href="#" target="_blank" rel="noopener" class="social-link" aria-label="YouTube" title="YouTube">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.377.504A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.504 9.376.504 9.376.504s7.505 0 9.377-.504a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </a>
-              <a href="#" target="_blank" rel="noopener" class="social-link" aria-label="Twitter" title="Twitter / X">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
+            <!-- Avatar layer (furthest from background — pops out most) -->
+            <div class="card-layer card-layer--avatar" id="layerAvatar">
+              <img src="assets/img/profile.png" alt="nIcO v99" class="avatar" />
             </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ===== SETTINGS SECTION ===== -->
-    <section class="settings-section" id="settingsSection">
-      <h2 class="section-title">
-        <span class="title-accent">⚙</span> CS2 Settings
-        <span class="cfg-badge">from config.cfg</span>
-      </h2>
+      <!-- RIGHT: Socials + Hardware + Settings Overview -->
+      <div class="hero-right">
 
-      <div class="settings-grid" id="settingsGrid">
-        <!-- Populated by JS from config.cfg -->
-        <div class="settings-loading">
-          <div class="spinner"></div>
-          <span>Loading settings from config.cfg…</span>
+        <!-- Social Links -->
+        <div class="right-block">
+          <h2 class="right-title">Social Media</h2>
+          <div class="social-links-row">
+            <a href="https://steamcommunity.com/id/nIcOv99/" target="_blank" rel="noopener" class="social-btn"
+              title="Steam">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 2C6.48 2 2 6.06 2 11.04c0 2.34 1.01 4.46 2.64 6.04l1.67-4.18c.07-.18.22-.33.39-.42l3.05-1.53c.24-.12.51-.08.71.09l2.15 1.72 3.24-2.43c.35-.26.83.03.77.47l-.56 4.03 3.89-1.95V11.04C20 6.06 17.52 2 12 2zm-1.13 14.82l-1.44.72c.59.55 1.38.89 2.24.89 1.8 0 3.26-1.46 3.26-3.26 0-.34-.05-.67-.15-.98l-1.55.78a1.84 1.84 0 01-2.36-2.08l-1.55.78a3.26 3.26 0 011.55 3.15z" />
+              </svg>
+            </a>
+            <a href="#" target="_blank" rel="noopener" class="social-btn" title="Discord">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M20.317 4.369a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.211.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.369a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.056 19.9 19.9 0 005.993 3.029.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.029.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.946 2.418-2.157 2.418z" />
+              </svg>
+            </a>
+            <a href="#" target="_blank" rel="noopener" class="social-btn" title="FACEIT">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.999 2.705L12.568 24H5.153l6.012-11.235L5.146 0h7.414l2.982 5.588L23.999 2.705z" />
+              </svg>
+            </a>
+            <a href="#" target="_blank" rel="noopener" class="social-btn" title="YouTube">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.377.504A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.504 9.376.504 9.376.504s7.505 0 9.377-.504a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+            </a>
+            <a href="#" target="_blank" rel="noopener" class="social-btn" title="Twitter / X">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
+          </div>
         </div>
+
+        <!-- Hardware -->
+        <div class="right-block">
+          <h2 class="right-title">Hardware</h2>
+          <div class="hw-grid">
+            <div class="hw-row"><span class="hw-label">CPU</span><span class="hw-value">Ryzen 7 5800X</span></div>
+            <div class="hw-row"><span class="hw-label">GPU</span><span class="hw-value">RTX 3070</span></div>
+            <div class="hw-row"><span class="hw-label">RAM</span><span class="hw-value">32 GB DDR4 3600 MHz</span></div>
+            <div class="hw-row"><span class="hw-label">Motherboard</span><span class="hw-value">MSI MPG B550 GAMING
+                CARBON WIFI</span></div>
+            <div class="hw-row"><span class="hw-label">Cooler</span><span class="hw-value">Arctic Freezer 34 eSports
+                DUO</span></div>
+            <div class="hw-row"><span class="hw-label">SSD</span><span class="hw-value">Crucial P2 1 TB + WD_BLACK SN770
+                2 TB</span></div>
+            <div class="hw-row"><span class="hw-label">Mouse</span><span class="hw-value">Pulsar X2V2 Mini</span></div>
+            <div class="hw-row"><span class="hw-label">Keyboard</span><span class="hw-value">Keychron K4 96%</span>
+            </div>
+            <div class="hw-row"><span class="hw-label">Headset</span><span class="hw-value">Razer Barracuda X</span>
+            </div>
+            <div class="hw-row"><span class="hw-label">Monitor</span><span class="hw-value">Philips 25M2N3200W</span>
+            </div>
+            <div class="hw-row"><span class="hw-label">Mousepad</span><span class="hw-value">BenQ ZOWIE P-SR</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CS2 Settings Overview (compact) -->
+        <div class="right-block">
+          <h2 class="right-title">CS2 Settings</h2>
+          <div class="settings-overview" id="settingsOverview">
+            <!-- Populated by JS -->
+          </div>
+          <a href="settings.html" class="view-all-link">View all settings & keybinds →</a>
+        </div>
+
       </div>
-    </section>
-
-    <!-- ===== HARDWARE SECTION ===== -->
-    <section class="settings-section">
-      <h2 class="section-title">
-        <span class="title-accent">🖥</span> Hardware
-      </h2>
-      <div class="settings-grid">
-        <!-- PC -->
-        <div class="settings-card">
-          <h3 class="settings-card-title">PC</h3>
-          <div class="setting-row"><span class="setting-label">CPU</span><span class="setting-value">Ryzen 7 5800X</span></div>
-          <div class="setting-row"><span class="setting-label">GPU</span><span class="setting-value">RTX 3070</span></div>
-          <div class="setting-row"><span class="setting-label">RAM</span><span class="setting-value">32 GB DDR4 3600 MHz</span></div>
-        </div>
-        <!-- Peripherals -->
-        <div class="settings-card">
-          <h3 class="settings-card-title">Peripherals</h3>
-          <div class="setting-row"><span class="setting-label">Mouse</span><span class="setting-value">Pulsar X2V2 Mini</span></div>
-          <div class="setting-row"><span class="setting-label">Keyboard</span><span class="setting-value">Keychron K4 96%</span></div>
-          <div class="setting-row"><span class="setting-label">Headset</span><span class="setting-value">Razer Barracuda X</span></div>
-          <div class="setting-row"><span class="setting-label">Monitor</span><span class="setting-value">TBD</span></div>
-          <div class="setting-row"><span class="setting-label">Mousepad</span><span class="setting-value">TBD</span></div>
-        </div>
-      </div>
-    </section>
-
+    </div>
   </main>
 
   <footer class="footer">
     <p>© 2025 nIcO v99 — <a href="https://nicov99.com">nicov99.com</a></p>
   </footer>
 
+  <!-- Hidden birth date for age calculation -->
+  <meta name="bd" content="2001-07-15" />
   <script src="script.js"></script>
 </body>
 

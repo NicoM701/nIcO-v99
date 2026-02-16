@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings — nIcO v99</title>
+    <meta name="description" content="nIcO v99 — CS2 Settings, Crosshair, Viewmodel, Keybinds" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="icon" type="image/png" href="assets/img/profile.png" />
+
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <!-- Background -->
+    <div class="bg-overlay"></div>
+    <div class="bg-video-wrap">
+        <img src="assets/bg/wavez.gif" alt="" class="bg-video" />
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <img src="assets/img/profile.png" alt="" class="nav-avatar" />
+            <span class="nav-brand">nIcO v99</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="settings.html" class="nav-link active">Settings</a>
+        </div>
+    </nav>
+
+    <!-- Settings Page Content -->
+    <div class="settings-page">
+        <h1 class="settings-page-title">CS2 Settings</h1>
+
+        <div class="settings-grid" id="settingsGrid">
+            <div class="settings-loading">
+                <div class="spinner"></div>
+                <span>Loading settings from config.cfg…</span>
+            </div>
+        </div>
+
+        <h1 class="settings-page-title" style="margin-top: 40px;">Keybinds</h1>
+
+        <div class="keybinds-grid" id="keybindsGrid">
+            <div class="settings-loading">
+                <div class="spinner"></div>
+                <span>Loading keybinds…</span>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2025 nIcO v99 — <a href="https://nicov99.com">nicov99.com</a></p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
