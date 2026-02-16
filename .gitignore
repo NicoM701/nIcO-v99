@@ -1,0 +1,11 @@
+# Dependency / OS
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
