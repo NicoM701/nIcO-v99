@@ -6,11 +6,9 @@ Personal gaming hub & config viewer for **nIcO v99**.
 
 - **Interactive Setup** — View CS2 settings, crosshair, and keybinds parsed directly from `config.cfg`.
 - **Visual Keyboard (ISO-DE)** — Hover over keys to see binds. Color-coded by action (Combat, Move, Comm, Buy, Misc).
-    - *Smart Mapping*: Automatically maps US-config binds to the correct German layout keys.
 - **Hardware Specs** — Detailed PC components and peripherals list.
 - **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, and Discord.
 - **Live Visitor Stats** — Real-time viewer count and total visits tracking using WebSocket and SQLite.
-- **Secure Age Calculation** — Server-side logic to determine age based on a hidden birthdate (or client-side fallback).
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
 ## 🛠️ Configuration
