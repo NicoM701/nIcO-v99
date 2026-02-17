@@ -1,0 +1,21 @@
+{
+  "name": "nico-v99-website",
+  "version": "1.0.0",
+  "description": "nIcO v99 — CS2 Player Website with Visitor Stats",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

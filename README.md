@@ -6,9 +6,9 @@ Personal gaming hub & config viewer for **nIcO v99**.
 
 - **Interactive Setup** — View CS2 settings, crosshair, and keybinds parsed directly from `config.cfg`.
 - **Visual Keyboard (ISO-DE)** — Hover over keys to see binds. Color-coded by action (Combat, Move, Comm, Buy, Misc).
-    - *Smart Mapping*: Automatically maps US-config binds to the correct German layout keys.
 - **Hardware Specs** — Detailed PC components and peripherals list.
 - **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, and Discord.
+- **Live Visitor Stats** — Real-time viewer count and total visits tracking using WebSocket and SQLite.
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
 ## 🛠️ Configuration
@@ -21,9 +21,12 @@ The website is powered by the `config.cfg` file.
 ## 🗂 Structure
 
 ```
+├── server.js           # Express Server & WebSocket Logic
+├── db.js               # SQLite Database Helper
 ├── index.html          # Profile & Hardware
 ├── settings.html       # CS2 Config & Keyboard
-├── script.js           # Parsers & UI Logic
+├── script.js           # SPA Routing & UI Logic
+├── viewer-stats.js     # WebSocket Client
 ├── styles.css          # Visual Styles
 ├── config.cfg          # Source of Truth
 ├── icons/              # Social & UI SVGs
@@ -32,7 +35,16 @@ The website is powered by the `config.cfg` file.
 
 ## 🚀 Deployment
 
-Just push to GitHub/GitLab/Netlify. No build process required—it's pure HTML/JS/CSS.
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Start Server**:
+    ```bash
+    npm start
+    ```
+3.  **Open Browser**:
+    Navigate to `http://localhost:3000`
 
 ## 📄 License
 

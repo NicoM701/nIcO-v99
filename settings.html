@@ -25,18 +25,20 @@
 
     <!-- Navigation -->
     <nav class="navbar">
-        <a href="index.html" class="nav-left" style="text-decoration:none; color:inherit;">
-            <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
-            <span class="nav-brand">nIcO v99</span>
-        </a>
-        <div class="nav-links">
-            <a href="index.html" class="nav-link">Home</a>
-            <a href="settings.html" class="nav-link active">Settings</a>
+        <div class="nav-inner">
+            <a href="/" class="nav-left" style="text-decoration:none; color:inherit;">
+                <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
+                <span class="nav-brand">nIcO v99</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/settings" class="nav-link active">Settings</a>
+            </div>
         </div>
     </nav>
 
     <!-- Settings Page Content -->
-    <div class="settings-page">
+    <div class="settings-page" id="swappable-content">
         <h1 class="settings-page-title">CS2 Settings</h1>
 
         <div class="settings-grid" id="settingsGrid">
@@ -56,6 +58,14 @@
                 <span>Loading keybinds…</span>
             </div>
         </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator" id="scrollIndicator">
+            <svg class="scroll-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+            </svg>
+        </div>
     </div>
 
     <footer class="footer">
@@ -63,6 +73,7 @@
     </footer>
 
     <script src="script.js"></script>
+    <script src="viewer-stats.js"></script>
 </body>
 
 </html>

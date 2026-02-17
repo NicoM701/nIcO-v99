@@ -21,11 +21,9 @@
     rel="stylesheet" />
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="assets/img/profile.png" />
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
 
   <link rel="stylesheet" href="styles.css" />
-  <!-- Hidden metadata for age calculation -->
-  <meta name="bd" content="2001-02-16" />
 </head>
 
 <body>
@@ -38,18 +36,20 @@
 
   <!-- Navigation -->
   <nav class="navbar">
-    <a href="index.html" class="nav-left" style="text-decoration:none; color:inherit;">
-      <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
-      <span class="nav-brand">nIcO v99</span>
-    </a>
-    <div class="nav-links">
-      <a href="index.html" class="nav-link active">Home</a>
-      <a href="settings.html" class="nav-link">Settings</a>
+    <div class="nav-inner">
+      <a href="/" class="nav-left" style="text-decoration:none; color:inherit;">
+        <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
+        <span class="nav-brand">nIcO v99</span>
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link active">Home</a>
+        <a href="/settings" class="nav-link">Settings</a>
+      </div>
     </div>
   </nav>
 
   <!-- Main Content — Two Column -->
-  <main class="main-container">
+  <main class="main-container" id="swappable-content">
     <div class="hero-layout">
 
       <!-- LEFT COLUMN: Sticky Card -->
@@ -122,7 +122,19 @@
 
         <!-- Hardware -->
         <div class="right-block">
-          <h2 class="right-title">Hardware</h2>
+          <h2 class="right-title">
+            <span>Hardware</span>
+            <a href="https://geizhals.de/wishlists/2076763" target="_blank" title="My PC Components (Geizhals)"
+              style="display:flex; align-items:center; gap:6px; color:inherit; text-decoration:none; opacity:0.8; font-size:0.7rem; font-weight:500;">
+              <span>2021 Build</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </h2>
           <div class="hw-grid">
             <div class="hw-row"><span class="hw-label">CPU</span><span class="hw-value">AMD Ryzen 7 5800X</span></div>
             <div class="hw-row"><span class="hw-label">GPU</span><span class="hw-value">NVIDIA RTX 3070</span></div>
@@ -134,7 +146,7 @@
                 eSports</span></div>
             <div class="hw-row"><span class="hw-label">SSD</span><span class="hw-value">Crucial P2 1 TB + WD_BLACK SN770
                 2 TB</span></div>
-            <div class="hw-row"><span class="hw-label">Mouse</span><span class="hw-value">Pulsar X2V2 Mini</span></div>
+            <div class="hw-row"><span class="hw-label">Mouse</span><span class="hw-value">Pulsar X2 Mini</span></div>
             <div class="hw-row"><span class="hw-label">Keyboard</span><span class="hw-value">Keychron K4 96% Gateron
                 Red</span>
             </div>
@@ -145,6 +157,9 @@
             </div>
             <div class="hw-row"><span class="hw-label">Mousepad</span><span class="hw-value">BenQ ZOWIE P-SR</span>
             </div>
+            <div class="hw-row"><span class="hw-label">Controller</span><span class="hw-value">Xbox Series X
+                Wireless</span>
+            </div>
           </div>
         </div>
 
@@ -154,7 +169,7 @@
           <div class="settings-overview" id="settingsOverview">
             <!-- Populated by JS -->
           </div>
-          <a href="settings.html" class="view-all-link">View all settings & keybinds →</a>
+          <a href="/settings" class="view-all-link">View all settings & keybinds →</a>
         </div>
 
     </div>
@@ -165,9 +180,9 @@
     <p>© 2025 nIcO v99 — <a href="https://nicov99.com">nicov99.com</a></p>
   </footer>
 
-  <!-- Hidden birth date for age calculation -->
-  <meta name="bd" content="2001-07-15" />
+  <!-- Hidden birth date for age calculation removed -->
   <script src="script.js"></script>
+  <script src="viewer-stats.js"></script>
 </body>
 
 </html>
