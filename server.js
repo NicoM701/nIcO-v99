@@ -1,26 +1,24 @@
 /**
- * server.js — Express server for nIcO v99 website (Vercel/Serverless compatible)
+ * server.js — Express + WebSocket server for nIcO v99 website
  */
 
 const express = require('express');
+const http = require('http');
+const { WebSocketServer } = require('ws');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const {
-    getTotalVisitors,
-    incrementTotalVisitors,
-    trackLiveUser,
-    getLiveCount
-} = require('./db');
+const { getTotalVisitors, incrementTotalVisitors, closeDb } = require('./db');
 
 const app = express();
+const server = http.createServer(app);
 
-// ── Trust proxy ──
+// ── Trust proxy (for deployments behind reverse proxies) ──
 app.set('trust proxy', 1);
 
-// ── Helmet ──
+// ── Helmet (security headers) ──
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -29,91 +27,176 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'"],
+            connectSrc: ["'self'", "ws:", "wss:"],
         },
     },
     crossOriginEmbedderPolicy: false,
 }));
 
+// ── Cookie parser ──
 app.use(cookieParser());
 
+// ── Rate limiting on visitor API ──
 const visitorLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 60, // Slightly higher for serverless bursts
+    windowMs: 60 * 1000, // 1 minute
+    max: 30,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests' },
 });
 
+// ── Live users tracking ──
+let liveConnections = new Set();
+
+function getLiveCount() {
+    return liveConnections.size;
+}
+
 // ── API Routes ──
 
-// POST /api/visitors/visit — check/increment + heartbeat for live
+// POST /api/visitors/visit — first visit check + increment
 app.post('/api/visitors/visit', visitorLimiter, async (req, res) => {
     try {
-        const visitorId = req.cookies && req.cookies.nv99_visited;
+        const hasVisited = req.cookies && req.cookies.nv99_visited;
         let total;
-        let live;
 
-        if (!visitorId) {
-            // New visitor
-            const newId = uuidv4();
+        if (!hasVisited) {
+            // First visit — increment and set cookie
             total = await incrementTotalVisitors();
-            live = await trackLiveUser(newId);
-
-            res.cookie('nv99_visited', newId, {
-                maxAge: 365 * 24 * 60 * 60 * 1000,
-                httpOnly: true,
-                sameSite: 'lax',
-            });
+            if (total !== null) {
+                res.cookie('nv99_visited', uuidv4(), {
+                    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+                    httpOnly: true,
+                    sameSite: 'lax',
+                });
+            }
         } else {
-            // Returning visitor — just track as live and get total
             total = await getTotalVisitors();
-            live = await trackLiveUser(visitorId);
         }
 
-        res.json({ total: total || '—', live: live || 0 });
+        if (total === null) {
+            return res.json({ total: '—', live: getLiveCount() });
+        }
+
+        res.json({ total, live: getLiveCount() });
     } catch (err) {
         console.error('Visit endpoint error:', err);
-        res.json({ total: '—', live: 0 });
+        res.json({ total: '—', live: getLiveCount() });
     }
 });
 
-// GET /api/visitors — get current stats (can be used for polling)
+
+
+// GET /api/visitors — get current stats
 app.get('/api/visitors', visitorLimiter, async (req, res) => {
     try {
-        const visitorId = req.cookies && req.cookies.nv99_visited;
-        // Also update heartbeat on simple GET if possible
-        const live = await trackLiveUser(visitorId);
         const total = await getTotalVisitors();
-        res.json({ total: total || '—', live: live || 0 });
+        res.json({ total: total !== null ? total : '—', live: getLiveCount() });
     } catch (err) {
         console.error('Visitors endpoint error:', err);
-        res.json({ total: '—', live: 0 });
+        res.json({ total: '—', live: getLiveCount() });
     }
 });
 
-// ── Routes ──
+// ── Explicit routes for clean URLs ──
 app.get('/settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'settings.html'));
 });
 
-// Serve static files
+// ── Serve static files ──
 app.use(express.static(path.join(__dirname), {
     extensions: ['html'],
     index: 'index.html',
 }));
 
-// Fallback
+// ── Fallback for SPA-like routes ──
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// No server.listen() here for Vercel, but we wrap it for local testing
-if (process.env.NODE_ENV !== 'production' && require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`✨ Local test server running on http://localhost:${PORT}`);
+// ── WebSocket Server ──
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+wss.on('connection', (ws) => {
+    liveConnections.add(ws);
+    broadcastLiveCount();
+
+    // Heartbeat
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
+
+    ws.on('message', (msg) => {
+        try {
+            const data = JSON.parse(msg);
+            if (data.type === 'ping') {
+                ws.send(JSON.stringify({ type: 'pong', live: getLiveCount() }));
+            }
+        } catch (e) {
+            // Ignore malformed messages
+        }
     });
+
+    ws.on('close', () => {
+        liveConnections.delete(ws);
+        broadcastLiveCount();
+    });
+
+    ws.on('error', () => {
+        liveConnections.delete(ws);
+    });
+
+    // Send initial live count
+    ws.send(JSON.stringify({ type: 'live', live: getLiveCount() }));
+});
+
+// Broadcast live count to all connected clients
+function broadcastLiveCount() {
+    const msg = JSON.stringify({ type: 'live', live: getLiveCount() });
+    for (const client of liveConnections) {
+        if (client.readyState === 1) { // WebSocket.OPEN
+            client.send(msg);
+        }
+    }
 }
 
-module.exports = app;
+// Heartbeat interval — clean up dead connections
+const heartbeatInterval = setInterval(() => {
+    for (const ws of liveConnections) {
+        if (!ws.isAlive) {
+            liveConnections.delete(ws);
+            ws.terminate();
+            continue;
+        }
+        ws.isAlive = false;
+        ws.ping();
+    }
+    broadcastLiveCount();
+}, 30000);
+
+wss.on('close', () => {
+    clearInterval(heartbeatInterval);
+});
+
+// ── Start server ──
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`✨ nIcO v99 server running on http://localhost:${PORT}`);
+});
+
+// ── Graceful shutdown ──
+process.on('SIGINT', () => {
+    console.log('\nShutting down...');
+    clearInterval(heartbeatInterval);
+    wss.close();
+    server.close();
+    closeDb();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    clearInterval(heartbeatInterval);
+    wss.close();
+    server.close();
+    closeDb();
+    process.exit(0);
+});

@@ -1,6 +1,6 @@
 /**
- * viewer-stats.js — Polling-based visitor counter + live users
- * Compatible with serverless environments (Vercel)
+ * viewer-stats.js — Client-side visitor counter + live users
+ * Renders pill in top-right, connects via WebSocket for live updates
  */
 
 (function () {
@@ -9,7 +9,9 @@
     // ── State ──
     let totalVisitors = null;
     let liveUsers = 0;
-    const POLL_INTERVAL = 10000; // 10 seconds
+    let ws = null;
+    let wsRetries = 0;
+    const MAX_WS_RETRIES = 5;
 
     // ── Format numbers nicely ──
     const fmt = (n) => {
@@ -19,7 +21,6 @@
 
     // ── Create the pill element ──
     function createPill() {
-        if (document.getElementById('viewer-stats-pill')) return;
         const pill = document.createElement('div');
         pill.id = 'viewer-stats-pill';
         pill.innerHTML = `
@@ -46,13 +47,10 @@
         if (liveEl) liveEl.textContent = fmt(liveUsers);
     }
 
-    // ── Fetch stats ──
-    async function fetchStats(isFirstVisit = false) {
+    // ── Register visit via POST ──
+    async function registerVisit() {
         try {
-            const url = isFirstVisit ? '/api/visitors/visit' : '/api/visitors';
-            const method = isFirstVisit ? 'POST' : 'GET';
-
-            const res = await fetch(url, { method });
+            const res = await fetch('/api/visitors/visit', { method: 'POST' });
             if (res.ok) {
                 const data = await res.json();
                 totalVisitors = data.total;
@@ -60,22 +58,74 @@
                 updateDisplay();
             }
         } catch (err) {
-            console.warn('Visitor stats: could not fetch stats', err);
+            console.warn('Visitor stats: could not register visit', err);
         }
     }
 
-    // ── Polling logic ──
+    // ── WebSocket connection for live count ──
+    function connectWebSocket() {
+        if (wsRetries >= MAX_WS_RETRIES) {
+            // Fall back to polling
+            startPolling();
+            return;
+        }
+
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+        ws.onopen = () => {
+            wsRetries = 0; // Reset on successful connection
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'live' || data.type === 'pong') {
+                    liveUsers = data.live;
+                    updateDisplay();
+                }
+            } catch (e) {
+                // Ignore
+            }
+        };
+
+        ws.onclose = () => {
+            ws = null;
+            wsRetries++;
+            // Reconnect with exponential backoff
+            const delay = Math.min(1000 * Math.pow(2, wsRetries), 30000);
+            setTimeout(connectWebSocket, delay);
+        };
+
+        ws.onerror = () => {
+            // onclose will handle reconnection
+        };
+    }
+
+    // ── Polling fallback ──
+    let pollInterval = null;
     function startPolling() {
-        setInterval(() => {
-            fetchStats(false);
-        }, POLL_INTERVAL);
+        if (pollInterval) return;
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/visitors');
+                if (res.ok) {
+                    const data = await res.json();
+                    totalVisitors = data.total;
+                    liveUsers = data.live || 0;
+                    updateDisplay();
+                }
+            } catch (e) {
+                // Silently fail
+            }
+        }, 10000);
     }
 
     // ── Initialize ──
     function init() {
         createPill();
-        fetchStats(true); // First call is a visit registration
-        startPolling();
+        registerVisit();
+        connectWebSocket();
     }
 
     // Run when DOM is ready

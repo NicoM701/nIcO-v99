@@ -1,80 +1,114 @@
 /**
- * db.js — Vercel KV (Redis) helper for visitor stats
- * Stores total_visitors count and tracks live users via expiring keys
+ * db.js — SQLite helper for visitor stats (using sql.js — pure JavaScript)
+ * Stores total_visitors count in ./data/visitors.sqlite
  */
 
-const { kv } = require('@vercel/kv');
+const path = require('path');
+const fs = require('fs');
+const initSqlJs = require('sql.js');
+
+const DATA_DIR = path.join(__dirname, 'data');
+const DB_PATH = path.join(DATA_DIR, 'visitors.sqlite');
+
+let db = null;
+let dbReady = null;
+
+function initDb() {
+  if (dbReady) return dbReady;
+
+  dbReady = (async () => {
+    // Ensure data directory exists
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+
+    const SQL = await initSqlJs();
+
+    // Load existing database or create new
+    if (fs.existsSync(DB_PATH)) {
+      const fileBuffer = fs.readFileSync(DB_PATH);
+      db = new SQL.Database(fileBuffer);
+    } else {
+      db = new SQL.Database();
+    }
+
+    // Create table if not exists
+    db.run(`
+      CREATE TABLE IF NOT EXISTS stats (
+        key TEXT PRIMARY KEY,
+        value INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+    // Initialize total_visitors if not present
+    const result = db.exec("SELECT value FROM stats WHERE key = 'total_visitors'");
+    if (result.length === 0 || result[0].values.length === 0) {
+      db.run("INSERT OR IGNORE INTO stats (key, value) VALUES ('total_visitors', 0)");
+      saveDb();
+    }
+
+    return db;
+  })();
+
+  return dbReady;
+}
+
+function saveDb() {
+  if (!db) return;
+  try {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(DB_PATH, buffer);
+  } catch (err) {
+    console.error('DB save error:', err.message);
+  }
+}
 
 /**
  * Get total visitor count
  */
 async function getTotalVisitors() {
   try {
-    const total = await kv.get('total_visitors');
-    return total || 0;
+    await initDb();
+    const result = db.exec("SELECT value FROM stats WHERE key = 'total_visitors'");
+    if (result.length > 0 && result[0].values.length > 0) {
+      return result[0].values[0][0];
+    }
+    return 0;
   } catch (err) {
-    console.error('KV error (getTotalVisitors):', err.message);
+    console.error('DB error (getTotalVisitors):', err.message);
     return null;
   }
 }
 
 /**
- * Increment and return the new total
+ * Atomically increment and return the new total
  */
 async function incrementTotalVisitors() {
   try {
-    const newTotal = await kv.incr('total_visitors');
-    return newTotal;
+    await initDb();
+    db.run("UPDATE stats SET value = value + 1 WHERE key = 'total_visitors'");
+    saveDb();
+    return await getTotalVisitors();
   } catch (err) {
-    console.error('KV error (incrementTotalVisitors):', err.message);
+    console.error('DB error (incrementTotalVisitors):', err.message);
     return null;
   }
 }
 
 /**
- * Track a live user and return current live count
- * We use a "set" of active keys with a short TTL (30s)
- */
-async function trackLiveUser(visitorId) {
-  if (!visitorId) return await getLiveCount();
-
-  try {
-    // Set a key for this visitor that expires in 30 seconds
-    const key = `live_user:${visitorId}`;
-    await kv.set(key, '1', { ex: 30 });
-    return await getLiveCount();
-  } catch (err) {
-    console.error('KV error (trackLiveUser):', err.message);
-    return 0;
-  }
-}
-
-/**
- * Scan keys matching live_user:* to get count
- */
-async function getLiveCount() {
-  try {
-    // Note: for very high traffic, scanning might be slow, 
-    // but for smaller personal sites, this is fine on Vercel KV.
-    const keys = await kv.keys('live_user:*');
-    return keys.length;
-  } catch (err) {
-    console.error('KV error (getLiveCount):', err.message);
-    return 0;
-  }
-}
-
-/**
- * Placeholder for compatibility with server.js
+ * Close the database connection gracefully
  */
 function closeDb() {
-  // KV doesn't need explicit closing in serverless
+  if (db) {
+    saveDb();
+    db.close();
+    db = null;
+    dbReady = null;
+  }
 }
 
-module.exports = {
-  getTotalVisitors,
-  incrementTotalVisitors,
-  trackLiveUser,
-  getLiveCount,
-  closeDb
-};
+// Initialize DB eagerly
+initDb().catch(err => console.error('DB init error:', err));
+
+module.exports = { getTotalVisitors, incrementTotalVisitors, closeDb };
