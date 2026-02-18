@@ -1,6 +1,7 @@
 /**
- * viewer-stats.js — Client-side visitor counter + live users
- * Renders pill in top-right, connects via WebSocket for live updates
+ * viewer-stats.js — Client-side visitor counter
+ * Uses polling every 5-10 seconds for live updates via Vercel KV
+ * Same UX as before, just without WebSocket
  */
 
 (function () {
@@ -9,9 +10,8 @@
     // ── State ──
     let totalVisitors = null;
     let liveUsers = 0;
-    let ws = null;
-    let wsRetries = 0;
-    const MAX_WS_RETRIES = 5;
+    let sessionId = null;
+    let pollInterval = null;
 
     // ── Format numbers nicely ──
     const fmt = (n) => {
@@ -55,6 +55,7 @@
                 const data = await res.json();
                 totalVisitors = data.total;
                 liveUsers = data.live || 0;
+                sessionId = data.sessionId;
                 updateDisplay();
             }
         } catch (err) {
@@ -62,70 +63,50 @@
         }
     }
 
-    // ── WebSocket connection for live count ──
-    function connectWebSocket() {
-        if (wsRetries >= MAX_WS_RETRIES) {
-            // Fall back to polling
-            startPolling();
-            return;
-        }
-
-        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${protocol}//${location.host}/ws`);
-
-        ws.onopen = () => {
-            wsRetries = 0; // Reset on successful connection
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'live' || data.type === 'pong') {
-                    liveUsers = data.live;
-                    updateDisplay();
-                }
-            } catch (e) {
-                // Ignore
+    // ── Polling: Update stats every 5-10 seconds ──
+    async function pollStats() {
+        try {
+            const res = await fetch('/api/visitors');
+            if (res.ok) {
+                const data = await res.json();
+                totalVisitors = data.total;
+                liveUsers = data.live || 0;
+                updateDisplay();
             }
-        };
-
-        ws.onclose = () => {
-            ws = null;
-            wsRetries++;
-            // Reconnect with exponential backoff
-            const delay = Math.min(1000 * Math.pow(2, wsRetries), 30000);
-            setTimeout(connectWebSocket, delay);
-        };
-
-        ws.onerror = () => {
-            // onclose will handle reconnection
-        };
+        } catch (err) {
+            console.warn('Visitor stats: polling failed', err);
+        }
     }
 
-    // ── Polling fallback ──
-    let pollInterval = null;
+    // ── Heartbeat: Keep session alive ──
+    async function sendHeartbeat() {
+        if (!sessionId) return;
+        try {
+            await fetch('/api/visitors/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId }),
+            });
+        } catch (err) {
+            console.warn('Visitor stats: heartbeat failed', err);
+        }
+    }
+
+    // ── Start polling ──
     function startPolling() {
         if (pollInterval) return;
-        pollInterval = setInterval(async () => {
-            try {
-                const res = await fetch('/api/visitors');
-                if (res.ok) {
-                    const data = await res.json();
-                    totalVisitors = data.total;
-                    liveUsers = data.live || 0;
-                    updateDisplay();
-                }
-            } catch (e) {
-                // Silently fail
-            }
-        }, 10000);
+        // Poll every 7 seconds (5-10 range)
+        pollInterval = setInterval(() => {
+            pollStats();
+            sendHeartbeat();
+        }, 7000);
     }
 
     // ── Initialize ──
     function init() {
         createPill();
         registerVisit();
-        connectWebSocket();
+        startPolling();
     }
 
     // Run when DOM is ready
