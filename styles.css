@@ -121,11 +121,6 @@ body {
     padding-right: 0;
   }
 
-  #viewer-stats-pill {
-    top: 75px;
-    right: 16px;
-    z-index: 99;
-  }
 }
 
 .nav-logo img {
@@ -315,6 +310,13 @@ body {
   }
 }
 
+@media (max-width: 768px) {
+  #viewer-stats-pill {
+    top: 56px;
+    right: 16px;
+    z-index: 99;
+  }
+}
 
 .nav-left {
   display: flex;
