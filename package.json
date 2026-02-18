@@ -1,16 +1,10 @@
 {
   "name": "nico-v99-website",
   "version": "1.0.0",
-  "description": "nIcO v99 — CS2 Player Website with Visitor Stats",
-  "main": "server.js",
+  "description": "nIcO v99 — CS2 Player Website",
+  "main": "index.html",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "dependencies": {
-    "@vercel/kv": "^0.2.4"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
+    "start": "npm install",
+    "dev": "echo 'Static site - open index.html in browser'"
   }
 }
