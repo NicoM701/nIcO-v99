@@ -560,6 +560,10 @@ body {
   /* Zoom in to reduce white space */
 }
 
+.social-btn--github img {
+  transform: scale(1.05);
+}
+
 .social-btn:hover {
   background: transparent;
   border: none;
