@@ -120,6 +120,13 @@ body {
   .nav-inner {
     padding-right: 0;
   }
+
+  #viewer-stats-pill {
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    z-index: 90;
+  }
 }
 
 .nav-logo img {
