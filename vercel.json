@@ -1,11 +1,6 @@
 {
   "buildCommand": "npm install",
   "outputDirectory": ".",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "cleanUrls": true,
   "rewrites": [
     {
