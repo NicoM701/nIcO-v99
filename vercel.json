@@ -1,11 +1,5 @@
 {
-  "buildCommand": "npm install",
+  "buildCommand": "",
   "outputDirectory": ".",
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/settings",
-      "destination": "/settings.html"
-    }
-  ]
+  "cleanUrls": true
 }
