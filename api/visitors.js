@@ -70,6 +70,10 @@ export default async function handler(req, res) {
     }
 
     if (method === 'GET') {
+      // Also refresh live presence on GET so polling updates don't expire
+      const fp = await getFingerprint(req);
+      await redis.set(`${LIVE_KEY}${fp}`, '1', { ex: LIVE_TTL });
+      
       const total = (await redis.get(TOTAL_KEY)) || 0;
       const live = await countLive();
       return res.json({ total: Number(total), live });
