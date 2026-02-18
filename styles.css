@@ -122,10 +122,9 @@ body {
   }
 
   #viewer-stats-pill {
-    top: 60px;
-    right: auto;
-    left: 16px;
-    z-index: 90;
+    top: 56px;
+    right: 16px;
+    z-index: 99;
   }
 }
 
