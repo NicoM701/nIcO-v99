@@ -561,7 +561,7 @@ body {
 }
 
 .social-btn--github img {
-  transform: scale(1.05);
+  transform: scale(0.9);
 }
 
 .social-btn:hover {
