@@ -1,128 +1,172 @@
-import { kv } from '@vercel/kv';
-
 /**
- * API Route: /api/visitors
- * Handles visitor counting + live user tracking via Vercel KV
+ * api/visitors.js — Vercel Serverless Visitor Stats API
+ * Uses Vercel KV if available, falls back to in-memory (resets on redeploy)
  */
 
-// ── Constants ──
+let kvAvailable = false;
+let kv = null;
+
+// Try to import Vercel KV
+try {
+  const kvModule = require('@vercel/kv');
+  if (kvModule && kvModule.kv) {
+    kv = kvModule.kv;
+    kvAvailable = true;
+  }
+} catch (e) {
+  console.warn('Vercel KV not available, using in-memory storage');
+}
+
+// Fallback in-memory store
+const memoryStore = {
+  'nv99:total_visitors': 0,
+  'nv99:live_sessions': {},
+};
+
 const VISITOR_KEY = 'nv99:total_visitors';
-const LIVE_USERS_KEY = 'nv99:live_users';
 const LIVE_SESSION_PREFIX = 'nv99:session:';
 const LIVE_SESSION_TTL = 35; // seconds
 
-// ── GET: Fetch visitor stats ──
-async function getVisitors(req) {
-  try {
-    const total = await kv.get(VISITOR_KEY) || 0;
-    
-    // Count live users (keys with active sessions)
-    const pattern = `${LIVE_SESSION_PREFIX}*`;
-    const keys = await kv.keys(pattern);
-    const liveCount = keys.length;
+// ── Get from KV or memory ──
+async function getValue(key) {
+  if (kvAvailable && kv) {
+    try {
+      return await kv.get(key);
+    } catch (err) {
+      console.error('KV get error:', err);
+      return memoryStore[key] || null;
+    }
+  }
+  return memoryStore[key] || null;
+}
 
-    return {
-      status: 200,
-      body: JSON.stringify({ total, live: liveCount }),
-    };
+// ── Set in KV or memory ──
+async function setValue(key, value) {
+  if (kvAvailable && kv) {
+    try {
+      await kv.set(key, value);
+    } catch (err) {
+      console.error('KV set error:', err);
+      memoryStore[key] = value;
+    }
+  } else {
+    memoryStore[key] = value;
+  }
+}
+
+// ── Set with TTL ──
+async function setValueWithTTL(key, value, ttl) {
+  if (kvAvailable && kv) {
+    try {
+      await kv.setex(key, ttl, value);
+    } catch (err) {
+      console.error('KV setex error:', err);
+      memoryStore[key] = value;
+    }
+  } else {
+    // Simple in-memory TTL simulation
+    memoryStore[key] = value;
+    setTimeout(() => {
+      delete memoryStore[key];
+    }, ttl * 1000);
+  }
+}
+
+// ── Get live session count ──
+async function getLiveCount() {
+  if (kvAvailable && kv) {
+    try {
+      const keys = await kv.keys(`${LIVE_SESSION_PREFIX}*`);
+      return keys.length;
+    } catch (err) {
+      console.error('KV keys error:', err);
+      return Object.keys(memoryStore)
+        .filter(k => k.startsWith(LIVE_SESSION_PREFIX)).length;
+    }
+  }
+  return Object.keys(memoryStore)
+    .filter(k => k.startsWith(LIVE_SESSION_PREFIX)).length;
+}
+
+// ── GET: Fetch visitor stats ──
+async function getVisitors(req, res) {
+  try {
+    const total = await getValue(VISITOR_KEY) || 0;
+    const live = await getLiveCount();
+
+    return res.status(200).json({ total, live });
   } catch (err) {
     console.error('GET /api/visitors error:', err);
-    return {
-      status: 200,
-      body: JSON.stringify({ total: '—', live: 0 }),
-    };
+    return res.status(200).json({ total: '—', live: 0 });
   }
 }
 
-// ── POST: Register visit (first-time only) ──
-async function postVisit(req) {
+// ── POST: Register visit ──
+async function postVisit(req, res) {
   try {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const sessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
-    // Check if already visited (cookie not available in serverless, use session ID from request)
-    // For now, assume all requests are new visits to Vercel KV
-    
-    // Increment total visitors
-    let total = (await kv.get(VISITOR_KEY)) || 0;
-    total = parseInt(total) + 1;
-    await kv.set(VISITOR_KEY, total);
+    // Increment total
+    let total = await getValue(VISITOR_KEY);
+    total = (parseInt(total) || 0) + 1;
+    await setValue(VISITOR_KEY, total);
 
-    // Register live session with TTL
+    // Register live session
     const liveKey = `${LIVE_SESSION_PREFIX}${sessionId}`;
-    await kv.setex(liveKey, LIVE_SESSION_TTL, '1');
+    await setValueWithTTL(liveKey, '1', 35);
 
-    // Return stats
-    const keys = await kv.keys(`${LIVE_SESSION_PREFIX}*`);
-    const liveCount = keys.length;
-
-    return {
-      status: 200,
-      body: JSON.stringify({ total, live: liveCount, sessionId }),
-    };
+    const live = await getLiveCount();
+    return res.status(200).json({ total, live, sessionId });
   } catch (err) {
     console.error('POST /api/visitors/visit error:', err);
-    return {
-      status: 200,
-      body: JSON.stringify({ total: '—', live: 0 }),
-    };
+    return res.status(200).json({ total: '—', live: 0 });
   }
 }
 
-// ── Heartbeat: Keep session alive ──
-async function postHeartbeat(req) {
+// ── POST: Heartbeat ──
+async function postHeartbeat(req, res) {
   try {
-    const { sessionId } = await req.json();
+    const { sessionId } = req.body || {};
     if (!sessionId) {
-      return { status: 400, body: JSON.stringify({ error: 'Missing sessionId' }) };
+      return res.status(400).json({ error: 'Missing sessionId' });
     }
 
     const liveKey = `${LIVE_SESSION_PREFIX}${sessionId}`;
-    await kv.setex(liveKey, LIVE_SESSION_TTL, '1');
+    await setValueWithTTL(liveKey, '1', 35);
 
-    // Get stats
-    const total = await kv.get(VISITOR_KEY) || 0;
-    const keys = await kv.keys(`${LIVE_SESSION_PREFIX}*`);
-    const liveCount = keys.length;
+    const total = await getValue(VISITOR_KEY) || 0;
+    const live = await getLiveCount();
 
-    return {
-      status: 200,
-      body: JSON.stringify({ total, live: liveCount }),
-    };
+    return res.status(200).json({ total, live });
   } catch (err) {
     console.error('POST /api/visitors/heartbeat error:', err);
-    return { status: 500, body: JSON.stringify({ error: 'Server error' }) };
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
 // ── Main handler ──
 export default async function handler(req, res) {
-  const { method, query, url } = req;
+  const { method, url } = req;
 
   try {
     // POST /api/visitors/visit
     if (method === 'POST' && url.includes('/visit')) {
-      const result = await postVisit(req);
-      res.status(result.status).json(JSON.parse(result.body));
-      return;
+      return await postVisit(req, res);
     }
 
     // POST /api/visitors/heartbeat
     if (method === 'POST' && url.includes('/heartbeat')) {
-      const result = await postHeartbeat(req);
-      res.status(result.status).json(JSON.parse(result.body));
-      return;
+      return await postHeartbeat(req, res);
     }
 
     // GET /api/visitors
     if (method === 'GET') {
-      const result = await getVisitors(req);
-      res.status(result.status).json(JSON.parse(result.body));
-      return;
+      return await getVisitors(req, res);
     }
 
-    res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('Handler error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
