@@ -572,10 +572,7 @@ body {
   filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
 }
 
-/* GitHub icon has internal padding, so don't scale it */
-.social-btn:nth-child(8) img {
-  transform: scale(1) !important;
-}
+/* GitHub icon — same scale as others */
 
 /* Hardware Grid */
 .hw-grid {

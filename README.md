@@ -1,57 +1,51 @@
-# nIcO v99 - Gaming Profile
+# nIcO v99 — Gaming Profile
 
 Personal gaming hub & config viewer for **nIcO v99**.
 
 ## ✨ Features
 
 - **Interactive Setup** — View CS2 settings, crosshair, and keybinds parsed directly from `config.cfg`.
-- **Visual Keyboard (ISO-DE)** — Hover over keys to see binds. Color-coded by action (Combat, Move, Comm, Buy, Misc).
+  - *Smart Mapping*: Automatically maps US-config binds to the correct German layout keys.
 - **Hardware Specs** — Detailed PC components and peripherals list.
-- **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, and Discord.
+- **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, Discord, and GitHub.
+- **Live Visitor Stats** — Real-time viewer count and total visits via Upstash Redis with polling updates.
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
 ## 🛠️ Configuration
 
 The website is powered by the `config.cfg` file.
 
-1. **Update Settings**: Replace `config.cfg` with your latest CS2 config file.
-2. **Update Binds**: The site automatically reads binds and updates the visual keyboard.
-3. **Crosshair**: The crosshair settings card uses `icons/crosshair.svg` as a custom cursor. Replace this file to change the preview.
+- **Update Settings**: Replace `config.cfg` with your latest CS2 config file.
+- **Update Binds**: The site automatically reads binds and updates the visual keyboard.
+- **Crosshair**: The crosshair settings card uses `icons/crosshair.svg` as a custom cursor.
 
 ## 🗂 Structure
 
 ```
-├── icons/              # Social & UI SVGs
-├── assets/             # Images & Backgrounds
-├── index.html          # Profile & Hardware
-├── settings.html       # CS2 Config & Keyboard
-├── script.js           # SPA Routing & UI Logic
-├── styles.css          # Visual Styles
-├── config.cfg          # Source of Truth (CS2 Settings)
-├── vercel.json         # Vercel Configuration
-└── package.json        # Project Metadata
+├── api/
+│   └── visitors.js       # Vercel Serverless: visitor stats (Upstash Redis)
+├── icons/                 # Social & UI SVGs
+├── assets/                # Images & Backgrounds
+├── index.html             # Profile & Hardware (Home)
+├── settings.html          # CS2 Config & Keyboard
+├── script.js              # SPA Routing & UI Logic
+├── viewer-stats.js        # Visitor counter client (polls /api/visitors)
+├── styles.css             # Visual Styles
+├── config.cfg             # Source of Truth (CS2 config)
+├── vercel.json            # Vercel deployment config
+└── package.json           # Dependencies (@upstash/redis)
 ```
 
 ## 🚀 Deployment
 
-### Local Development
-
-1. Open `index.html` in your browser
-2. Or use a local server:
-   ```bash
-   python -m http.server 3000
-   # or
-   npx http-server -p 3000
-   ```
-
-### Vercel Deployment
-
-1. Push to GitHub (repo must be connected to Vercel)
-2. Vercel auto-deploys on push
-3. Visit your deployment URL
-
-Live site: https://nicov99.vercel.app
+1. Push to GitHub
+2. Connect repo to [Vercel](https://vercel.com)
+3. Create a free [Upstash Redis](https://upstash.com) database
+4. Add environment variables in Vercel project settings:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+5. Deploy!
 
 ## 📄 License
 
-Personal project — all rights reserved.
+MIT
