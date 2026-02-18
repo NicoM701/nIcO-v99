@@ -1,14 +1,15 @@
 /**
- * GET /api/visitors — return total unique visitors + approximate live count
- * POST /api/visitors — register a visit (unique by IP hash + cookie fallback)
+ * GET  /api/visitors — return total unique visitors + live count
+ * POST /api/visitors — register a visit (cookieless, daily-salted IP hash)
  * DELETE /api/visitors — reset counter (requires VISITOR_RESET_SECRET header)
  *
- * Uses Upstash Redis via @upstash/redis (REST-based, Vercel-friendly).
- * 
- * Env vars needed:
+ * Privacy-friendly: no cookies, no persistent IP storage.
+ * Uses a daily-rotating salt so IP hashes can't be correlated across days.
+ *
+ * Env vars:
  *   UPSTASH_REDIS_REST_URL
  *   UPSTASH_REDIS_REST_TOKEN
- *   VISITOR_RESET_SECRET (optional, for reset endpoint)
+ *   VISITOR_RESET_SECRET (for reset endpoint)
  */
 
 import { Redis } from '@upstash/redis';
@@ -19,34 +20,29 @@ const redis = new Redis({
 });
 
 const TOTAL_KEY = 'nv99:total_visitors';
-const SEEN_KEY = 'nv99:seen_visitors';   // Redis SET of visitor fingerprints
+const SEEN_KEY = 'nv99:seen_visitors';   // Redis SET of hashed fingerprints
 const LIVE_KEY = 'nv99:live:';
-const LIVE_TTL = 30; // seconds — a viewer is "live" if seen within 30s
+const LIVE_TTL = 30;
 
-function getVisitorId(req) {
-  const cookies = parseCookies(req.headers.cookie || '');
-  return cookies['nv99_vid'] || null;
-}
-
-function getIpFingerprint(req) {
+/**
+ * Create a privacy-safe fingerprint from IP + daily salt.
+ * The salt rotates daily so hashes can't be correlated long-term.
+ */
+async function getFingerprint(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
     || req.headers['x-real-ip']
     || req.socket?.remoteAddress
     || 'unknown';
-  return `ip:${ip}`;
-}
 
-function parseCookies(cookieHeader) {
-  const out = {};
-  for (const pair of cookieHeader.split(';')) {
-    const [k, ...v] = pair.trim().split('=');
-    if (k) out[k] = v.join('=');
-  }
-  return out;
-}
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const raw = `${ip}:${today}:nv99salt`;
 
-function generateId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // Use Web Crypto (available in Vercel Edge & Node 18+)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(raw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export default async function handler(req, res) {
@@ -54,29 +50,18 @@ export default async function handler(req, res) {
     const method = req.method;
 
     if (method === 'POST') {
-      // Register visit
-      let vid = getVisitorId(req);
-      const ipFp = getIpFingerprint(req);
+      const fp = await getFingerprint(req);
 
-      if (!vid) {
-        vid = generateId();
-        res.setHeader('Set-Cookie', `nv99_vid=${vid}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`);
-      }
+      // Check if this fingerprint was already seen
+      const added = await redis.sadd(SEEN_KEY, fp);
 
-      // Check uniqueness by both cookie ID and IP fingerprint
-      const [addedByCookie, addedByIp] = await Promise.all([
-        redis.sadd(SEEN_KEY, `cookie:${vid}`),
-        redis.sadd(SEEN_KEY, ipFp),
-      ]);
-
-      // Only increment if BOTH are new (first time from this IP with this cookie)
-      // If either the IP or the cookie was already seen, it's a repeat visitor
-      if (addedByCookie === 1 && addedByIp === 1) {
+      if (added === 1) {
+        // New unique visitor
         await redis.incr(TOTAL_KEY);
       }
 
-      // Mark this visitor as live (TTL-based)
-      await redis.set(`${LIVE_KEY}${vid}`, '1', { ex: LIVE_TTL });
+      // Track live presence using the hash (no IP stored)
+      await redis.set(`${LIVE_KEY}${fp}`, '1', { ex: LIVE_TTL });
 
       const total = (await redis.get(TOTAL_KEY)) || 0;
       const live = await countLive();
@@ -85,14 +70,8 @@ export default async function handler(req, res) {
     }
 
     if (method === 'GET') {
-      const vid = getVisitorId(req);
-      if (vid) {
-        await redis.set(`${LIVE_KEY}${vid}`, '1', { ex: LIVE_TTL });
-      }
-
       const total = (await redis.get(TOTAL_KEY)) || 0;
       const live = await countLive();
-
       return res.json({ total: Number(total), live });
     }
 
@@ -103,7 +82,6 @@ export default async function handler(req, res) {
       }
       await redis.set(TOTAL_KEY, 0);
       await redis.del(SEEN_KEY);
-      // Clear all live keys
       let cursor = 0;
       do {
         const [nextCursor, keys] = await redis.scan(cursor, { match: `${LIVE_KEY}*`, count: 100 });
