@@ -8,7 +8,9 @@
 // ──────────────────────────────────────────
 const DPI = 1200;
 const CROSSHAIR_CODE = 'CSGO-JQZpU-3m3wr-rv889-nUCtF-WHFFN';
+const CS_START_DATE_UTC = Date.UTC(2014, 11, 22, 15, 44, 9);
 let configCache = null; // Cache config to avoid re-fetching on every nav
+let csElapsedInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -125,10 +127,17 @@ function handleRoute() {
 
   initAge(); // Runs if #userAge exists
 
+  if (csElapsedInterval) {
+    clearInterval(csElapsedInterval);
+    csElapsedInterval = null;
+  }
+
   if (path === '/' || path.endsWith('index.html')) {
     initHome();
   } else if (path.includes('settings')) {
     initSettings();
+  } else if (path.includes('faq')) {
+    initFaq();
   }
 }
 
@@ -205,6 +214,31 @@ function handleScrollIndicator() {
   } else {
     indicator.classList.remove('hidden');
   }
+}
+
+function initFaq() {
+  const elapsedEl = document.getElementById('csStartElapsed');
+  if (!elapsedEl) return;
+
+  const renderElapsed = () => {
+    const now = Date.now();
+    const diff = Math.max(0, now - CS_START_DATE_UTC);
+    elapsedEl.textContent = formatElapsed(diff);
+  };
+
+  renderElapsed();
+  csElapsedInterval = setInterval(renderElapsed, 1000);
+}
+
+function formatElapsed(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const years = Math.floor(totalSeconds / (365.2425 * 24 * 60 * 60));
+  const secondsAfterYears = totalSeconds - Math.floor(years * 365.2425 * 24 * 60 * 60);
+  const hours = Math.floor(secondsAfterYears / 3600);
+  const minutes = Math.floor((secondsAfterYears % 3600) / 60);
+  const seconds = secondsAfterYears % 60;
+
+  return `${years} years, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
 }
 
 

@@ -800,6 +800,48 @@ body {
 }
 
 
+/* ---------- FAQ PAGE ---------- */
+.faq-page {
+  max-width: 980px;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.faq-card {
+  background: var(--bg-settings);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+
+.faq-card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--purple-300);
+  margin: 0 0 10px;
+}
+
+.faq-card p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.faq-card a {
+  color: var(--purple-300);
+}
+
+.faq-note {
+  font-weight: 700;
+  color: #d0ffd8;
+}
+
 /* ---------- KEYBOARD LAYOUT ---------- */
 .keyboard-wrap {
   background: rgba(10, 10, 15, 0.5);
