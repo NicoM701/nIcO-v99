@@ -4,7 +4,8 @@
   "outputDirectory": ".",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/settings", "destination": "/settings.html" }
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/faq", "destination": "/faq.html" }
   ],
   "headers": [
     {
