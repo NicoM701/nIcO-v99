@@ -1,14 +1,24 @@
 /**
  * viewer-stats.js — Client-side visitor counter + live users (polling)
- * Renders pill in top-right, polls /api/visitors every 10s for live updates
+ * Renders pill in top-right and polls /api/visitors for live updates
  */
 
 (function () {
   'use strict';
 
+  if (window.__viewerStatsInitialized) return;
+  window.__viewerStatsInitialized = true;
+
+  const POLL_INTERVAL_MS = 15000;
+  const POLL_JITTER_MS = 1500;
+  const FETCH_TIMEOUT_MS = 4000;
+
   let totalVisitors = null;
   let liveUsers = 0;
-  let pollInterval = null;
+  let pollTimeout = null;
+  let activeFetchController = null;
+  let registerPromise = null;
+  let isPolling = false;
 
   const fmt = (n) => {
     if (n === null || n === undefined || n === '—') return '—';
@@ -16,6 +26,9 @@
   };
 
   function createPill() {
+    const existingPill = document.getElementById('viewer-stats-pill');
+    if (existingPill) return existingPill;
+
     const pill = document.createElement('div');
     pill.id = 'viewer-stats-pill';
     pill.innerHTML = `
@@ -31,6 +44,7 @@
       </div>
     `;
     document.body.appendChild(pill);
+    return pill;
   }
 
   function updateDisplay() {
@@ -40,43 +54,103 @@
     if (liveEl) liveEl.textContent = fmt(liveUsers);
   }
 
-  async function registerVisit() {
+  async function fetchWithTimeout(url, options = {}) {
+    if (activeFetchController) {
+      activeFetchController.abort();
+    }
+
+    const controller = new AbortController();
+    activeFetchController = controller;
+    const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
     try {
-      const res = await fetch('/api/visitors', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        totalVisitors = data.total;
-        liveUsers = data.live || 0;
-        updateDisplay();
+      const res = await fetch(url, {
+        ...options,
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      return res;
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeFetchController === controller) {
+        activeFetchController = null;
       }
+    }
+  }
+
+  async function syncStats(method) {
+    try {
+      const res = await fetchWithTimeout('/api/visitors', { method });
+      if (!res || !res.ok) return;
+
+      const data = await res.json();
+      totalVisitors = data.total;
+      liveUsers = data.live || 0;
+      updateDisplay();
     } catch (err) {
-      console.warn('Visitor stats: could not register visit', err);
-    }
-  }
-
-  async function pollStats() {
-    try {
-      const res = await fetch('/api/visitors');
-      if (res.ok) {
-        const data = await res.json();
-        totalVisitors = data.total;
-        liveUsers = data.live || 0;
-        updateDisplay();
+      if (err.name !== 'AbortError') {
+        // Expected network failures from blocked/offline clients stay silent in production.
       }
-    } catch (e) {
-      // Silently fail
     }
   }
 
-  function startPolling() {
-    if (pollInterval) return;
-    pollInterval = setInterval(pollStats, 10000);
+  function stopPolling() {
+    isPolling = false;
+    if (pollTimeout) {
+      window.clearTimeout(pollTimeout);
+      pollTimeout = null;
+    }
+    if (activeFetchController) {
+      activeFetchController.abort();
+      activeFetchController = null;
+    }
+  }
+
+  function scheduleNextPoll() {
+    if (!isPolling || document.visibilityState === 'hidden') return;
+    const delay = POLL_INTERVAL_MS + Math.floor(Math.random() * POLL_JITTER_MS);
+    pollTimeout = window.setTimeout(async () => {
+      await syncStats('GET');
+      scheduleNextPoll();
+    }, delay);
+  }
+
+  async function startPolling() {
+    if (isPolling || document.visibilityState === 'hidden') return;
+    isPolling = true;
+    await syncStats('GET');
+    scheduleNextPoll();
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'hidden') {
+      stopPolling();
+      return;
+    }
+
+    if (registerPromise) {
+      registerPromise.finally(() => startPolling());
+      return;
+    }
+
+    startPolling();
   }
 
   function init() {
     createPill();
-    registerVisit();
-    startPolling();
+    updateDisplay();
+
+    if (!registerPromise) {
+      registerPromise = syncStats('POST');
+    }
+
+    registerPromise.finally(() => {
+      if (document.visibilityState !== 'hidden') {
+        startPolling();
+      }
+    });
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
   }
 
   if (document.readyState === 'loading') {

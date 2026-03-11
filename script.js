@@ -9,8 +9,11 @@
 const DPI = 1200;
 const CROSSHAIR_CODE = 'CSGO-JQZpU-3m3wr-rv889-nUCtF-WHFFN';
 const CS_START_DATE_UTC = Date.UTC(2014, 11, 22, 15, 44, 9);
+const ROUTE_CACHE_TTL_MS = 30000;
 let configCache = null; // Cache config to avoid re-fetching on every nav
 let csElapsedInterval = null;
+let activeNavigationController = null;
+const routeCache = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -27,7 +30,10 @@ function initApp() {
   // 2. Handle Initial Route
   handleRoute();
 
-  // 3. Intercept Links for SPA
+  // 3. Warm the small set of internal routes after initial render.
+  warmRouteCache();
+
+  // 4. Intercept Links for SPA
   document.body.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (link && link.origin === window.location.origin && !link.hasAttribute('target') && !link.hasAttribute('download')) {
@@ -36,7 +42,10 @@ function initApp() {
     }
   });
 
-  // 4. Handle Back/Forward history
+  document.body.addEventListener('pointerenter', handleLinkPrefetch, true);
+  document.body.addEventListener('focusin', handleLinkPrefetch);
+
+  // 5. Handle Back/Forward history
   window.addEventListener('popstate', () => {
     loadPage(window.location.pathname, false);
   });
@@ -55,15 +64,23 @@ function attachGlobalListeners() {
 //  ROUTING logic
 // ──────────────────────────────────────────
 async function navigateTo(url) {
-  if (url === window.location.pathname) return;
+  const pathname = normalizePath(url);
+  if (pathname === normalizePath(window.location.pathname)) return;
   await loadPage(url, true);
 }
 
 async function loadPage(url, pushState = true) {
+  const pathname = normalizePath(url);
+
+  if (activeNavigationController) {
+    activeNavigationController.abort();
+  }
+
+  const controller = new AbortController();
+  activeNavigationController = controller;
+
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Network response was not ok');
-    const html = await res.text();
+    const html = await fetchRouteHtml(pathname, { signal: controller.signal });
 
     // Parse new HTML
     const parser = new DOMParser();
@@ -76,7 +93,6 @@ async function loadPage(url, pushState = true) {
     if (newContent && currentContent) {
       currentContent.replaceWith(newContent);
     } else {
-      console.error('Could not find #swappable-content in fetched page or current page');
       if (pushState) window.location.href = url;
       return;
     }
@@ -86,11 +102,11 @@ async function loadPage(url, pushState = true) {
 
     // Update History
     if (pushState) {
-      window.history.pushState({}, '', url);
+      window.history.pushState({}, '', pathname);
     }
 
     // Update Navbar Active State
-    updateNavbarActiveState(url);
+    updateNavbarActiveState(pathname);
 
     // Re-initialize Page Scripts
     handleRoute();
@@ -99,19 +115,22 @@ async function loadPage(url, pushState = true) {
     window.scrollTo({ top: 0, behavior: 'auto' });
 
   } catch (err) {
-    console.error('Navigation failed:', err);
+    if (err.name === 'AbortError') return;
     if (pushState) window.location.href = url;
+  } finally {
+    if (activeNavigationController === controller) {
+      activeNavigationController = null;
+    }
   }
 }
 
 function updateNavbarActiveState(url) {
-  // Normalize URL: remove trailing slash if present (unless root)
-  const normUrl = (url.length > 1 && url.endsWith('/')) ? url.slice(0, -1) : url;
+  const normUrl = normalizePath(url);
 
   const links = document.querySelectorAll('.nav-link');
   links.forEach(link => {
-    const href = link.getAttribute('href');
-    const normHref = (href.length > 1 && href.endsWith('/')) ? href.slice(0, -1) : href;
+    const href = link.getAttribute('href') || '/';
+    const normHref = normalizePath(href);
 
     // Exact match on normalized paths
     if (normUrl === normHref) {
@@ -120,6 +139,79 @@ function updateNavbarActiveState(url) {
       link.classList.remove('active');
     }
   });
+}
+
+function normalizePath(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const pathname = parsed.pathname || '/';
+    return (pathname.length > 1 && pathname.endsWith('/')) ? pathname.slice(0, -1) : pathname;
+  } catch {
+    return url;
+  }
+}
+
+function getCachedRoute(pathname) {
+  const cached = routeCache.get(pathname);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > ROUTE_CACHE_TTL_MS) {
+    routeCache.delete(pathname);
+    return null;
+  }
+  return cached.html;
+}
+
+function setCachedRoute(pathname, html) {
+  routeCache.set(pathname, { html, timestamp: Date.now() });
+}
+
+async function fetchRouteHtml(pathname, options = {}) {
+  const cached = getCachedRoute(pathname);
+  if (cached) return cached;
+
+  const res = await fetch(pathname, {
+    signal: options.signal,
+    headers: { 'X-Requested-With': 'spa-navigation' }
+  });
+  if (!res.ok) throw new Error(`Failed to load route: ${pathname}`);
+  const html = await res.text();
+  setCachedRoute(pathname, html);
+  return html;
+}
+
+function prefetchRoute(pathname) {
+  if (document.visibilityState === 'hidden' || getCachedRoute(pathname)) return;
+
+  fetchRouteHtml(pathname).catch(() => {
+    // Ignore prefetch failures and fall back to normal navigation.
+  });
+}
+
+function handleLinkPrefetch(event) {
+  const link = event.target.closest('a');
+  if (!link || link.origin !== window.location.origin) return;
+  if (link.hasAttribute('target') || link.hasAttribute('download')) return;
+
+  const pathname = normalizePath(link.getAttribute('href') || '/');
+  if (!pathname || pathname === normalizePath(window.location.pathname)) return;
+  prefetchRoute(pathname);
+}
+
+function warmRouteCache() {
+  const warm = () => {
+    document.querySelectorAll('.nav-link').forEach(link => {
+      const pathname = normalizePath(link.getAttribute('href') || '/');
+      if (pathname !== normalizePath(window.location.pathname)) {
+        prefetchRoute(pathname);
+      }
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(warm, { timeout: 1200 });
+  } else {
+    window.setTimeout(warm, 300);
+  }
 }
 
 function handleRoute() {
@@ -297,8 +389,7 @@ async function loadAndParseConfig() {
     const res = await fetch('config.cfg');
     if (!res.ok) throw new Error('Failed to load');
     return parseConfigVars(await res.text());
-  } catch (e) {
-    console.error(e);
+  } catch {
     return null;
   }
 }
