@@ -282,19 +282,21 @@ async function initSettings() {
 }
 
 async function initAge() {
-  const el = document.getElementById('userAge');
-  if (!el) return;
+  const ageTargets = document.querySelectorAll('#userAge, #faqAge');
+  if (!ageTargets.length) return;
 
-  // Client-side verification as requested: Base year 2001 for "25 in 2026"
-  // Updates on Aug 1st
-  const bd = new Date('2001-08-01');
+  // Nico's actual birthday: 2001-07-15
+  const bd = new Date('2001-07-15');
   const today = new Date();
   let age = today.getFullYear() - bd.getFullYear();
   const m = today.getMonth() - bd.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) {
     age--;
   }
-  el.textContent = age;
+
+  ageTargets.forEach((el) => {
+    el.textContent = age;
+  });
 }
 
 function handleScrollIndicator() {
