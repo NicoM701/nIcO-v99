@@ -282,7 +282,21 @@ async function initSettings() {
 }
 
 async function initAge() {
-  // Age rendering intentionally disabled to avoid storing birth date in client code.
+  const ageTargets = document.querySelectorAll('#userAge, #faqAge');
+  if (!ageTargets.length) return;
+
+  // Deliberate proxy switch date (01.08) to avoid exposing exact DOB in client code.
+  const bd = new Date('2001-08-01');
+  const today = new Date();
+  let age = today.getFullYear() - bd.getFullYear();
+  const m = today.getMonth() - bd.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) {
+    age--;
+  }
+
+  ageTargets.forEach((el) => {
+    el.textContent = age;
+  });
 }
 
 function handleScrollIndicator() {
