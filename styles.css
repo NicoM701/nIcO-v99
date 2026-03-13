@@ -1260,12 +1260,18 @@ body {
   }
 
   52% {
+    transform: translateY(-115%);
+    opacity: 0.9;
+  }
+
+  76% {
+    transform: translateY(250%);
     opacity: 0.9;
   }
 
   100% {
     transform: translateY(250%);
-    opacity: 0.9;
+    opacity: 0;
   }
 }
 
