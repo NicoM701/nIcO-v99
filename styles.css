@@ -457,29 +457,25 @@ body {
 }
 
 .hero-scanline {
-  top: -42%;
-  left: 50%;
-  width: 112px;
-  height: 160px;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.06) 20%, rgba(216, 180, 254, 0.38) 50%, rgba(216, 180, 254, 0.06) 80%, transparent 100%);
+  inset: -20% 0 auto;
+  height: 55%;
+  background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.02) 35%, rgba(216, 180, 254, 0.16) 50%, rgba(216, 180, 254, 0.02) 65%, transparent 100%);
   mix-blend-mode: screen;
-  opacity: 0;
-  filter: blur(8px);
-  animation: scanSweep 6.2s ease-in-out infinite;
+  opacity: 0.9;
+  animation: scanSweep 6.5s linear infinite;
 }
 
 .hero-rings {
-  inset: 17% auto auto 50%;
+  inset: 18% auto auto 50%;
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  border: 1px solid rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.09);
   transform: translateX(-50%);
   box-shadow:
-    0 0 0 28px rgba(192, 132, 252, 0.025),
-    0 0 0 58px rgba(192, 132, 252, 0.0125);
-  opacity: 0.36;
+    0 0 0 28px rgba(192, 132, 252, 0.03),
+    0 0 0 58px rgba(192, 132, 252, 0.015);
+  opacity: 0.4;
   animation: ringPulse 7s ease-in-out infinite;
 }
 
@@ -546,7 +542,7 @@ body {
 .hero-sponsor-card {
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   width: 380px;
   padding: 18px 20px;
   border-radius: 16px;
@@ -557,21 +553,20 @@ body {
   color: var(--text-primary);
   text-decoration: none;
   overflow: hidden;
-  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
 .hero-sponsor-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.06), transparent 40%, rgba(168, 85, 247, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.04), transparent 44%, rgba(168, 85, 247, 0.03) 100%);
   pointer-events: none;
 }
 
 .hero-sponsor-card:hover {
   transform: translateY(-2px);
   border-color: rgba(147, 51, 234, 0.2);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
 .hero-sponsor-card__topline {
@@ -581,14 +576,16 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .hero-sponsor-card__badge {
-  padding: 5px 9px;
+  padding: 4px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(216, 180, 254, 0.16);
-  background: rgba(233, 213, 255, 0.06);
-  font-size: 0.58rem;
+  border: 1px solid rgba(216, 180, 254, 0.14);
+  background: rgba(233, 213, 255, 0.05);
+  font-size: 0.56rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -599,27 +596,28 @@ body {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .hero-sponsor-card__eyebrow {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--purple-300);
+  letter-spacing: 0.12em;
+  color: var(--purple-400);
 }
 
 .hero-sponsor-card strong {
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--text-primary);
 }
 
 .hero-sponsor-card__copy {
-  max-width: 28ch;
-  font-size: 0.82rem;
-  line-height: 1.45;
+  max-width: 30ch;
+  font-size: 0.83rem;
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
@@ -627,10 +625,10 @@ body {
   position: relative;
   z-index: 1;
   justify-self: start;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 12px;
-  border: 1px solid rgba(216, 180, 254, 0.14);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(216, 180, 254, 0.12);
+  background: rgba(255, 255, 255, 0.03);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1256,28 +1254,12 @@ body {
 }
 
 @keyframes scanSweep {
-  0%,
-  58% {
-    transform: translateX(-50%) translateY(-220px);
-    opacity: 0;
-  }
-
-  64% {
-    opacity: 0.18;
-  }
-
-  72% {
-    opacity: 0.95;
-  }
-
-  84% {
-    transform: translateX(-50%) translateY(270px);
-    opacity: 0.16;
+  0% {
+    transform: translateY(-115%);
   }
 
   100% {
-    transform: translateX(-50%) translateY(340px);
-    opacity: 0;
+    transform: translateY(250%);
   }
 }
 
