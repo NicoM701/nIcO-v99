@@ -383,6 +383,10 @@ body {
   gap: 18px;
 }
 
+.hero-left > .hero-sponsor-card {
+  min-height: 242px;
+}
+
 .hero-right {
   flex: 1;
   display: flex;
@@ -542,6 +546,7 @@ body {
 .hero-sponsor-card {
   position: relative;
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: 14px;
   width: 380px;
   padding: 18px 20px;
@@ -597,6 +602,8 @@ body {
   z-index: 1;
   display: grid;
   gap: 8px;
+  padding-left: 14px;
+  max-width: 31ch;
 }
 
 .hero-sponsor-card__eyebrow {
@@ -614,7 +621,6 @@ body {
 }
 
 .hero-sponsor-card__copy {
-  max-width: 31ch;
   font-size: 0.81rem;
   line-height: 1.48;
   color: var(--text-secondary);
