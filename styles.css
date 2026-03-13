@@ -654,7 +654,7 @@ body {
 }
 
 .hero-sponsor-card__logo {
-  width: 84px;
+  width: 168px;
   height: auto;
   opacity: 0.68;
   filter: brightness(1.02);
@@ -1386,7 +1386,7 @@ body {
   }
 
   .hero-sponsor-card__logo {
-    width: 72px;
+    width: 132px;
   }
 
   .hero-sponsor-card__cta {
