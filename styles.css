@@ -602,9 +602,9 @@ body {
   z-index: 1;
   display: grid;
   gap: 6px;
-  padding-left: 20px;
-  padding-bottom: 4px;
-  max-width: 31ch;
+  padding-left: 26px;
+  padding-bottom: 6px;
+  max-width: 33ch;
 }
 
 .hero-sponsor-card__eyebrow {
