@@ -614,15 +614,15 @@ body {
 }
 
 .hero-sponsor-card strong {
-  font-size: 1.02rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 
 .hero-sponsor-card__copy {
-  font-size: 0.81rem;
-  line-height: 1.48;
+  font-size: 0.78rem;
+  line-height: 1.35;
   color: var(--text-secondary);
 }
 
