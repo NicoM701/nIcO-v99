@@ -627,16 +627,10 @@ body {
   color: var(--text-secondary);
 }
 
-.hero-sponsor-card__footer {
+.hero-sponsor-card__cta {
   position: relative;
   z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 14px;
-}
-
-.hero-sponsor-card__cta {
+  justify-self: start;
   padding: 9px 13px;
   border-radius: 12px;
   border: 1px solid rgba(216, 180, 254, 0.12);
@@ -646,14 +640,6 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-primary);
-}
-
-.hero-sponsor-card__logo {
-  width: 96px;
-  height: auto;
-  opacity: 0.78;
-  filter: brightness(1.05);
-  object-fit: contain;
 }
 
 /* ---------- RIGHT COLUMN ---------- */
