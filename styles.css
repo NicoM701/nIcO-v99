@@ -457,16 +457,16 @@ body {
 }
 
 .hero-scanline {
-  top: -8%;
-  bottom: -8%;
+  top: -42%;
   left: 50%;
-  width: 140px;
+  width: 112px;
+  height: 160px;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.04) 18%, rgba(216, 180, 254, 0.22) 50%, rgba(216, 180, 254, 0.04) 82%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.06) 20%, rgba(216, 180, 254, 0.38) 50%, rgba(216, 180, 254, 0.06) 80%, transparent 100%);
   mix-blend-mode: screen;
-  opacity: 0.9;
-  filter: blur(10px);
-  animation: beamFloat 5.5s ease-in-out infinite;
+  opacity: 0;
+  filter: blur(8px);
+  animation: scanSweep 6.2s ease-in-out infinite;
 }
 
 .hero-rings {
@@ -474,12 +474,12 @@ body {
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  border: 1px solid rgba(192, 132, 252, 0.16);
+  border: 1px solid rgba(192, 132, 252, 0.08);
   transform: translateX(-50%);
   box-shadow:
-    0 0 0 28px rgba(192, 132, 252, 0.05),
-    0 0 0 58px rgba(192, 132, 252, 0.025);
-  opacity: 0.72;
+    0 0 0 28px rgba(192, 132, 252, 0.025),
+    0 0 0 58px rgba(192, 132, 252, 0.0125);
+  opacity: 0.36;
   animation: ringPulse 7s ease-in-out infinite;
 }
 
@@ -1255,16 +1255,29 @@ body {
   }
 }
 
-@keyframes beamFloat {
+@keyframes scanSweep {
   0%,
-  100% {
-    transform: translateX(-50%) translateY(-10px);
-    opacity: 0.72;
+  58% {
+    transform: translateX(-50%) translateY(-220px);
+    opacity: 0;
   }
 
-  50% {
-    transform: translateX(-50%) translateY(10px);
+  64% {
+    opacity: 0.18;
+  }
+
+  72% {
     opacity: 0.95;
+  }
+
+  84% {
+    transform: translateX(-50%) translateY(270px);
+    opacity: 0.16;
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(340px);
+    opacity: 0;
   }
 }
 
