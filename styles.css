@@ -546,105 +546,96 @@ body {
 .hero-sponsor-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 14px;
-  align-items: center;
+  gap: 12px;
   width: 380px;
-  padding: 18px;
-  border-radius: 22px;
-  border: 1px solid rgba(168, 85, 247, 0.22);
-  background: linear-gradient(135deg, rgba(33, 18, 58, 0.92), rgba(20, 12, 38, 0.88));
-  backdrop-filter: blur(18px);
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-settings);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--text-primary);
   text-decoration: none;
   overflow: hidden;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .hero-sponsor-card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, transparent 18%, rgba(255, 255, 255, 0.16) 36%, transparent 52%);
-  transform: translateX(-130%);
-  animation: sponsorShimmer 4.8s ease-in-out infinite;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.06), transparent 40%, rgba(168, 85, 247, 0.04) 100%);
   pointer-events: none;
 }
 
 .hero-sponsor-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  border-color: rgba(216, 180, 254, 0.42);
-  box-shadow: 0 20px 44px rgba(33, 12, 62, 0.42);
+  transform: translateY(-2px);
+  border-color: rgba(147, 51, 234, 0.2);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.hero-sponsor-card__topline {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .hero-sponsor-card__badge {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  padding: 5px 10px;
+  padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(233, 213, 255, 0.1);
-  border: 1px solid rgba(216, 180, 254, 0.2);
-  font-size: 0.62rem;
+  border: 1px solid rgba(216, 180, 254, 0.16);
+  background: rgba(233, 213, 255, 0.06);
+  font-size: 0.58rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--purple-200);
-}
-
-.hero-sponsor-card__icon {
-  position: relative;
-  z-index: 1;
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #f5b800, #ffdf65);
-  color: #231238;
-  font-size: 1.6rem;
-  font-weight: 900;
-  box-shadow: 0 10px 24px rgba(255, 198, 46, 0.28);
+  color: var(--text-secondary);
 }
 
 .hero-sponsor-card__content {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .hero-sponsor-card__eyebrow {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   color: var(--purple-300);
 }
 
 .hero-sponsor-card strong {
-  font-size: 1.28rem;
-  font-weight: 900;
-  line-height: 1;
-  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .hero-sponsor-card__copy {
+  max-width: 28ch;
   font-size: 0.82rem;
+  line-height: 1.45;
   color: var(--text-secondary);
 }
 
 .hero-sponsor-card__cta {
   position: relative;
   z-index: 1;
-  align-self: center;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(216, 180, 254, 0.2);
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  justify-self: start;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 180, 254, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.72rem;
+  font-weight: 600;
   letter-spacing: 0.08em;
-  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--text-primary);
 }
 
 /* ---------- RIGHT COLUMN ---------- */
@@ -1277,17 +1268,6 @@ body {
   }
 }
 
-@keyframes sponsorShimmer {
-  0%,
-  12% {
-    transform: translateX(-130%);
-  }
-
-  30%,
-  100% {
-    transform: translateX(130%);
-  }
-}
 
 .hero-left {
   animation: fadeInUp 0.7s ease-out both;
