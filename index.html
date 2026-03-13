@@ -62,6 +62,18 @@
         <div class="tilt-container" id="tiltContainer">
           <div class="profile-card" id="profileCard">
             <div class="card-glow" id="cardGlow"></div>
+            <div class="hero-grid-overlay" aria-hidden="true"></div>
+            <div class="hero-scanline" aria-hidden="true"></div>
+            <div class="hero-rings" aria-hidden="true"></div>
+            <div class="hero-orb hero-orb--one" aria-hidden="true"></div>
+            <div class="hero-orb hero-orb--two" aria-hidden="true"></div>
+            <div class="hero-corner hero-corner--top" aria-hidden="true"></div>
+            <div class="hero-corner hero-corner--bottom" aria-hidden="true"></div>
+
+            <div class="hero-status" id="heroStatus">
+              <span class="hero-status__dot"></span>
+              <span>CS2 setup dialed in</span>
+            </div>
 
             <!-- Info layer: Tagline (closest to background) -->
             <div class="card-layer card-layer--tag" id="layerTag">
@@ -77,12 +89,51 @@
             <div class="card-layer card-layer--avatar" id="layerAvatar">
               <img src="assets/img/profile.png" alt="nIcO v99" class="avatar" />
             </div>
+
+            <div class="hero-card-meta card-layer" id="layerMeta">
+              <span>aim routine</span>
+              <span>240 Hz</span>
+              <span>purple build</span>
+            </div>
           </div>
         </div>
+
+        <a href="https://abacus.ai/?via=nico" target="_blank" rel="noreferrer" class="hero-sponsor-card">
+          <span class="hero-sponsor-card__eyebrow">Sponsor</span>
+          <strong>AbacusAI</strong>
+          <span class="hero-sponsor-card__copy">Referral link for the AI tools behind the grind. Opens in a new tab.</span>
+        </a>
       </aside>
 
       <!-- RIGHT COLUMN: Content -->
       <section class="hero-right">
+
+        <div class="right-block hero-intro-block">
+          <div class="hero-intro-copy">
+            <p class="hero-kicker">Purple pressure, clean setup</p>
+            <h2 class="hero-headline">A sharper homepage with live-overlay energy instead of a static profile card.</h2>
+            <p class="hero-description">The hero now leans into motion, depth, and HUD-style layering while keeping the current glassy purple identity intact.</p>
+          </div>
+          <div class="hero-metrics" id="heroMetrics">
+            <div class="hero-metric">
+              <span class="hero-metric__value">Faceit</span>
+              <span class="hero-metric__label">competitive focus</span>
+            </div>
+            <div class="hero-metric">
+              <span class="hero-metric__value">240 Hz</span>
+              <span class="hero-metric__label">current monitor</span>
+            </div>
+            <div class="hero-metric">
+              <span class="hero-metric__value">AbacusAI</span>
+              <span class="hero-metric__label">sponsor link</span>
+            </div>
+          </div>
+          <a href="https://abacus.ai/?via=nico" target="_blank" rel="noreferrer" class="hero-sponsor-inline">
+            <span class="hero-sponsor-inline__label">Sponsored</span>
+            <span class="hero-sponsor-inline__brand">AbacusAI referral</span>
+            <span class="hero-sponsor-inline__text">A deliberate placement in the hero rail, not a banner dump.</span>
+          </a>
+        </div>
 
         <!-- Socials Block -->
         <div class="right-block">
