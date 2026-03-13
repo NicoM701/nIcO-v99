@@ -238,8 +238,6 @@ function handleRoute() {
 //  PAGE SPECIFIC INITS
 // ──────────────────────────────────────────
 async function initHome() {
-  initHeroExperience();
-
   // Home Overview
   const el = document.getElementById('settingsOverview');
   if (el) {
@@ -351,13 +349,11 @@ function handleGlobalTilt(e) {
   const layerAvatar = document.getElementById('layerAvatar');
   const layerName = document.getElementById('layerName');
   const layerTag = document.getElementById('layerTag');
-  const layerMeta = document.getElementById('layerMeta');
 
   const MAX_TILT = 8;
   const DEPTH_TAG = 8;
   const DEPTH_NAME = 22;
   const DEPTH_AVATAR = 45;
-  const DEPTH_META = 16;
 
   const rect = container.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
@@ -367,13 +363,10 @@ function handleGlobalTilt(e) {
   const normY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight / 2)));
 
   card.style.transform = `rotateX(${-normY * MAX_TILT}deg) rotateY(${normX * MAX_TILT}deg)`;
-  card.style.setProperty('--hero-spotlight-x', `${((e.clientX - rect.left) / rect.width) * 100}%`);
-  card.style.setProperty('--hero-spotlight-y', `${((e.clientY - rect.top) / rect.height) * 100}%`);
 
   if (layerTag) layerTag.style.transform = `translateZ(20px) translateX(${normX * DEPTH_TAG}px) translateY(${normY * DEPTH_TAG}px)`;
   if (layerName) layerName.style.transform = `translateZ(50px) translateX(${normX * DEPTH_NAME}px) translateY(${normY * DEPTH_NAME}px)`;
   if (layerAvatar) layerAvatar.style.transform = `translateZ(80px) translateX(${normX * DEPTH_AVATAR}px) translateY(${normY * DEPTH_AVATAR}px)`;
-  if (layerMeta) layerMeta.style.transform = `translateX(-50%) translateZ(36px) translateX(${normX * DEPTH_META}px) translateY(${normY * DEPTH_META}px)`;
 
   if (glow) {
     glow.style.left = `${e.clientX - rect.left}px`;
@@ -382,32 +375,6 @@ function handleGlobalTilt(e) {
     glow.classList.toggle('active', dist < 600);
   }
 }
-
-function initHeroExperience() {
-  const heroMetrics = document.getElementById('heroMetrics');
-  if (!heroMetrics) return;
-
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReducedMotion) {
-    const status = document.getElementById('heroStatus');
-    if (status) status.style.animation = 'none';
-  }
-
-  const monitorRow = Array.from(document.querySelectorAll('.hw-row')).find((row) => {
-    const label = row.querySelector('.hw-label');
-    return label && label.textContent.trim() === 'Monitor';
-  });
-
-  if (monitorRow && heroMetrics.children[1]) {
-    const monitorValue = monitorRow.querySelector('.hw-value');
-    if (monitorValue) {
-      heroMetrics.children[1].querySelector('.hero-metric__value').textContent = monitorValue.textContent.includes('240 Hz')
-        ? '240 Hz'
-        : monitorValue.textContent.trim();
-    }
-  }
-}
-
 
 // ──────────────────────────────────────────
 //  CONFIG PARSER & DATA LOADING
