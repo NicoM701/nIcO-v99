@@ -462,7 +462,7 @@ body {
   background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.02) 35%, rgba(216, 180, 254, 0.16) 50%, rgba(216, 180, 254, 0.02) 65%, transparent 100%);
   mix-blend-mode: screen;
   opacity: 0.9;
-  animation: scanSweep 6.5s linear infinite;
+  animation: scanSweep 13s linear infinite;
 }
 
 .hero-rings {
