@@ -600,11 +600,10 @@ body {
 }
 
 .hero-sponsor-card__eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--purple-400);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--purple-300);
 }
 
 .hero-sponsor-card strong {
@@ -615,9 +614,9 @@ body {
 }
 
 .hero-sponsor-card__copy {
-  max-width: 30ch;
-  font-size: 0.83rem;
-  line-height: 1.5;
+  max-width: 31ch;
+  font-size: 0.81rem;
+  line-height: 1.48;
   color: var(--text-secondary);
 }
 
