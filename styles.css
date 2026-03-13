@@ -461,7 +461,7 @@ body {
   height: 55%;
   background: linear-gradient(180deg, transparent 0%, rgba(216, 180, 254, 0.02) 35%, rgba(216, 180, 254, 0.16) 50%, rgba(216, 180, 254, 0.02) 65%, transparent 100%);
   mix-blend-mode: screen;
-  opacity: 0.9;
+  opacity: 0;
   animation: scanSweep 13s linear infinite;
 }
 
@@ -1253,12 +1253,19 @@ body {
 }
 
 @keyframes scanSweep {
-  0% {
+  0%,
+  50% {
     transform: translateY(-115%);
+    opacity: 0;
+  }
+
+  52% {
+    opacity: 0.9;
   }
 
   100% {
     transform: translateY(250%);
+    opacity: 0.9;
   }
 }
 
