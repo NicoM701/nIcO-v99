@@ -632,34 +632,28 @@ body {
   z-index: 1;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  padding-top: 6px;
+  align-items: flex-end;
+  gap: 14px;
 }
 
 .hero-sponsor-card__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 12px;
   border: 1px solid rgba(216, 180, 254, 0.12);
   background: rgba(255, 255, 255, 0.03);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-primary);
-  white-space: nowrap;
 }
 
 .hero-sponsor-card__logo {
-  width: 84px;
+  width: 96px;
   height: auto;
-  opacity: 0.68;
-  filter: brightness(1.02);
+  opacity: 0.78;
+  filter: brightness(1.05);
   object-fit: contain;
-  margin-left: auto;
 }
 
 /* ---------- RIGHT COLUMN ---------- */
@@ -1379,14 +1373,6 @@ body {
   .hero-sponsor-card {
     grid-template-columns: 1fr;
     text-align: left;
-  }
-
-  .hero-sponsor-card__footer {
-    gap: 16px;
-  }
-
-  .hero-sponsor-card__logo {
-    width: 72px;
   }
 
   .hero-sponsor-card__cta {
