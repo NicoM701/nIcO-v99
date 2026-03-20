@@ -1298,15 +1298,24 @@ body {
   .hero-left {
     position: relative;
     top: 0;
-  }
-
-  .hero-sponsor-card {
-    width: 340px;
+    width: 100%;
+    display: contents;
   }
 
   .tilt-container {
+    order: 1;
     width: 340px;
     height: 430px;
+  }
+
+  .hero-right {
+    order: 2;
+    width: 100%;
+  }
+
+  .hero-sponsor-card {
+    order: 3;
+    width: 340px;
   }
 
   .avatar {
