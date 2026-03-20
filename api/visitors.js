@@ -21,7 +21,7 @@ const redis = new Redis({
 
 const TOTAL_KEY = 'nv99:total_visitors';
 const SEEN_KEY = 'nv99:seen_visitors';   // Redis SET of hashed fingerprints
-const LIVE_KEY = 'nv99:live:';
+const LIVE_SET_KEY = 'nv99:live_visitors';
 const LIVE_TTL = 30;
 
 /**
@@ -60,23 +60,26 @@ export default async function handler(req, res) {
         await redis.incr(TOTAL_KEY);
       }
 
-      // Track live presence using the hash (no IP stored)
-      await redis.set(`${LIVE_KEY}${fp}`, '1', { ex: LIVE_TTL });
+      await touchLiveVisitor(fp);
 
-      const total = (await redis.get(TOTAL_KEY)) || 0;
-      const live = await countLive();
+      const [total, live] = await Promise.all([
+        redis.get(TOTAL_KEY),
+        countLive(),
+      ]);
 
-      return res.json({ total: Number(total), live });
+      return res.json({ total: Number(total || 0), live });
     }
 
     if (method === 'GET') {
       // Also refresh live presence on GET so polling updates don't expire
       const fp = await getFingerprint(req);
-      await redis.set(`${LIVE_KEY}${fp}`, '1', { ex: LIVE_TTL });
-      
-      const total = (await redis.get(TOTAL_KEY)) || 0;
-      const live = await countLive();
-      return res.json({ total: Number(total), live });
+      await touchLiveVisitor(fp);
+
+      const [total, live] = await Promise.all([
+        redis.get(TOTAL_KEY),
+        countLive(),
+      ]);
+      return res.json({ total: Number(total || 0), live });
     }
 
     if (method === 'DELETE') {
@@ -84,14 +87,11 @@ export default async function handler(req, res) {
       if (secret !== process.env.VISITOR_RESET_SECRET) {
         return res.status(403).json({ error: 'Forbidden' });
       }
-      await redis.set(TOTAL_KEY, 0);
-      await redis.del(SEEN_KEY);
-      let cursor = 0;
-      do {
-        const [nextCursor, keys] = await redis.scan(cursor, { match: `${LIVE_KEY}*`, count: 100 });
-        if (keys.length) await Promise.all(keys.map(k => redis.del(k)));
-        cursor = Number(nextCursor);
-      } while (cursor !== 0);
+      await Promise.all([
+        redis.set(TOTAL_KEY, 0),
+        redis.del(SEEN_KEY),
+        redis.del(LIVE_SET_KEY),
+      ]);
       return res.json({ reset: true, total: 0, live: 0 });
     }
 
@@ -103,16 +103,19 @@ export default async function handler(req, res) {
   }
 }
 
+async function touchLiveVisitor(fingerprint) {
+  const now = Date.now();
+  await redis.zadd(LIVE_SET_KEY, { score: now, member: fingerprint });
+}
+
 async function countLive() {
   try {
-    let cursor = 0;
-    let count = 0;
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor, { match: `${LIVE_KEY}*`, count: 100 });
-      count += keys.length;
-      cursor = Number(nextCursor);
-    } while (cursor !== 0);
-    return count;
+    const now = Date.now();
+    const cutoff = now - (LIVE_TTL * 1000);
+
+    await redis.zremrangebyscore(LIVE_SET_KEY, 0, cutoff);
+    const count = await redis.zcount(LIVE_SET_KEY, cutoff, now);
+    return Number(count || 0);
   } catch {
     return 0;
   }

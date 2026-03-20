@@ -15,9 +15,11 @@ let csElapsedInterval = null;
 let activeNavigationController = null;
 const routeCache = new Map();
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp, { once: true });
+} else {
   initApp();
-});
+}
 
 
 // ──────────────────────────────────────────

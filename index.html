@@ -26,8 +26,23 @@
   <link rel="stylesheet" href="styles.css" />
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    window.loadVercelInsights = window.loadVercelInsights || function () {
+      if (window.__vaScriptRequested) return;
+      window.__vaScriptRequested = true;
+      const script = document.createElement('script');
+      script.src = '/_vercel/insights/script.js';
+      script.async = true;
+      script.onerror = function () { window.__vaBlocked = true; };
+      document.head.appendChild(script);
+    };
+    window.addEventListener('load', function () {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(window.loadVercelInsights, { timeout: 2000 });
+      } else {
+        window.setTimeout(window.loadVercelInsights, 1200);
+      }
+    }, { once: true });
   </script>
-  <script defer src="/_vercel/insights/script.js" onerror="window.__vaBlocked = true;"></script>
 </head>
 
 <body>

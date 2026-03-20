@@ -153,9 +153,16 @@
     document.addEventListener('visibilitychange', handleVisibilityChange);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  function scheduleInit() {
+    const start = () => window.setTimeout(init, 0);
+
+    if (document.readyState === 'complete') {
+      start();
+      return;
+    }
+
+    window.addEventListener('load', start, { once: true });
   }
+
+  scheduleInit();
 })();
