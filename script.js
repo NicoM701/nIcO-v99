@@ -14,28 +14,6 @@ let configCache = null; // Cache config to avoid re-fetching on every nav
 let csElapsedInterval = null;
 let activeNavigationController = null;
 const routeCache = new Map();
-const HERO_SPONSOR_AUTOPLAY_MS = 6200;
-const HERO_SPONSOR_DRAG_THRESHOLD = 56;
-const HERO_SPONSOR_SLIDES = [
-  {
-    href: 'https://chatllm.abacus.ai/zkZsXzHxKD',
-    ariaLabel: 'Open AbacusAI ChatLLM affiliate link',
-    label: 'Affiliate · AI tools',
-    title: 'ChatLLM keeps the model chaos in one tab.',
-    copy: 'ChatGPT, Claude, Gemini and more under one simple subscription.',
-    cta: 'Open ChatLLM ↗'
-  },
-  {
-    href: 'https://www.trading212.com/invite/Hr6ADcl7',
-    ariaLabel: 'Open Trading212 affiliate link',
-    label: 'Affiliate · Investing',
-    title: 'Trading212 is a clean way to start investing.',
-    copy: 'Stocks, ETFs and fractional shares in a calm mobile-first app.',
-    cta: 'Open Trading212 ↗',
-    cardClass: 'hero-sponsor-card--trading212'
-  }
-];
-let sponsorCarouselInterval = null;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp, { once: true });
@@ -248,11 +226,6 @@ function handleRoute() {
     csElapsedInterval = null;
   }
 
-  if (sponsorCarouselInterval) {
-    clearInterval(sponsorCarouselInterval);
-    sponsorCarouselInterval = null;
-  }
-
   if (path === '/' || path.endsWith('index.html')) {
     initHome();
   } else if (path.includes('settings')) {
@@ -267,8 +240,6 @@ function handleRoute() {
 //  PAGE SPECIFIC INITS
 // ──────────────────────────────────────────
 async function initHome() {
-  initSponsorCarousel();
-
   // Home Overview
   const el = document.getElementById('settingsOverview');
   if (el) {
@@ -277,163 +248,6 @@ async function initHome() {
     else el.innerHTML = '<p style="color:var(--text-muted)">Could not load settings.</p>';
   }
 }
-
-function initSponsorCarousel() {
-  const root = document.getElementById('heroSponsorCarousel');
-  const viewport = document.getElementById('heroSponsorViewport');
-  const track = document.getElementById('heroSponsorTrack');
-  const pagination = document.getElementById('heroSponsorPagination');
-
-  if (sponsorCarouselInterval) {
-    clearInterval(sponsorCarouselInterval);
-    sponsorCarouselInterval = null;
-  }
-
-  if (!root || !viewport || !track || !pagination) return;
-
-  track.innerHTML = HERO_SPONSOR_SLIDES.map((slide, index) => `
-    <a
-      href="${slide.href}"
-      target="_blank"
-      rel="noreferrer"
-      class="hero-sponsor-card ${slide.cardClass || ''}"
-      aria-label="${slide.ariaLabel}"
-      aria-hidden="${index === 0 ? 'false' : 'true'}"
-      tabindex="${index === 0 ? '0' : '-1'}"
-    >
-      <span class="hero-sponsor-card__label">${slide.label}</span>
-      <div class="hero-sponsor-card__content">
-        <strong>${slide.title}</strong>
-        <span class="hero-sponsor-card__copy">${slide.copy}</span>
-      </div>
-      <div class="hero-sponsor-card__footer">
-        <span class="hero-sponsor-card__cta">${slide.cta}</span>
-        <span class="hero-sponsor-card__status">${index + 1}/${HERO_SPONSOR_SLIDES.length}</span>
-      </div>
-    </a>
-  `).join('');
-
-  pagination.innerHTML = HERO_SPONSOR_SLIDES.map((_, index) => `
-    <span class="hero-sponsor-carousel__dot${index === 0 ? ' is-active' : ''}"></span>
-  `).join('');
-
-  let currentIndex = 0;
-  let dragOffset = 0;
-  let pointerId = null;
-  let dragStartX = 0;
-  let isDragging = false;
-  let suppressClickUntil = 0;
-
-  const slides = Array.from(track.querySelectorAll('.hero-sponsor-card'));
-  const dots = Array.from(pagination.querySelectorAll('.hero-sponsor-carousel__dot'));
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const clampOffset = (offset) => {
-    const maxOffset = viewport.clientWidth * 0.22;
-    return Math.max(-maxOffset, Math.min(maxOffset, offset));
-  };
-
-  const render = ({ immediate = false } = {}) => {
-    track.style.transition = immediate || isDragging || prefersReducedMotion ? 'none' : '';
-    track.style.transform = `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`;
-    root.dataset.activeSlide = String(currentIndex);
-
-    slides.forEach((slide, index) => {
-      const active = index === currentIndex;
-      slide.setAttribute('aria-hidden', String(!active));
-      slide.tabIndex = active ? 0 : -1;
-    });
-
-    dots.forEach((dot, index) => {
-      dot.classList.toggle('is-active', index === currentIndex);
-    });
-  };
-
-  const goTo = (nextIndex, options = {}) => {
-    currentIndex = (nextIndex + slides.length) % slides.length;
-    dragOffset = 0;
-    render(options);
-  };
-
-  const stopAutoplay = () => {
-    if (sponsorCarouselInterval) {
-      clearInterval(sponsorCarouselInterval);
-      sponsorCarouselInterval = null;
-    }
-  };
-
-  const restartAutoplay = () => {
-    stopAutoplay();
-    if (prefersReducedMotion || slides.length < 2) return;
-    sponsorCarouselInterval = window.setInterval(() => {
-      goTo(currentIndex + 1);
-    }, HERO_SPONSOR_AUTOPLAY_MS);
-  };
-
-  const endDrag = () => {
-    if (!isDragging) return;
-    const movedEnough = Math.abs(dragOffset) > HERO_SPONSOR_DRAG_THRESHOLD;
-    const direction = dragOffset < 0 ? 1 : -1;
-
-    isDragging = false;
-    pointerId = null;
-
-    if (movedEnough) {
-      suppressClickUntil = Date.now() + 350;
-      goTo(currentIndex + direction);
-    } else {
-      dragOffset = 0;
-      render();
-    }
-
-    restartAutoplay();
-  };
-
-  viewport.addEventListener('pointerdown', (event) => {
-    if (slides.length < 2 || event.pointerType === 'mouse' && event.button !== 0) return;
-    pointerId = event.pointerId;
-    dragStartX = event.clientX;
-    dragOffset = 0;
-    isDragging = true;
-    stopAutoplay();
-    viewport.setPointerCapture?.(pointerId);
-    render({ immediate: true });
-  });
-
-  viewport.addEventListener('pointermove', (event) => {
-    if (!isDragging || event.pointerId !== pointerId) return;
-    dragOffset = clampOffset(event.clientX - dragStartX);
-    render({ immediate: true });
-  });
-
-  viewport.addEventListener('pointerup', (event) => {
-    if (event.pointerId !== pointerId) return;
-    viewport.releasePointerCapture?.(pointerId);
-    endDrag();
-  });
-
-  viewport.addEventListener('pointercancel', () => {
-    dragOffset = 0;
-    endDrag();
-  });
-
-  track.addEventListener('click', (event) => {
-    if (Date.now() < suppressClickUntil) {
-      event.preventDefault();
-    }
-  });
-
-  root.addEventListener('mouseenter', stopAutoplay);
-  root.addEventListener('mouseleave', restartAutoplay);
-  root.addEventListener('focusin', stopAutoplay);
-  root.addEventListener('focusout', (event) => {
-    if (!root.contains(event.relatedTarget)) restartAutoplay();
-  });
-
-  render({ immediate: true });
-  restartAutoplay();
-}
-
 
 async function initSettings() {
   const grid = document.getElementById('settingsGrid');

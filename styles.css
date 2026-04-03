@@ -383,7 +383,7 @@ body {
   gap: 18px;
 }
 
-.hero-left > .hero-sponsor-carousel {
+.hero-left > .hero-sponsor-slot {
   min-height: 242px;
 }
 
@@ -543,76 +543,31 @@ body {
   opacity: 0.8;
 }
 
-.hero-sponsor-carousel {
-  display: grid;
-  gap: 10px;
-  width: 380px;
-}
-
-.hero-sponsor-carousel__viewport {
-  overflow: hidden;
-  border-radius: 18px;
-  touch-action: pan-y;
-  cursor: grab;
-}
-
-.hero-sponsor-carousel__viewport:active {
-  cursor: grabbing;
-}
-
-.hero-sponsor-carousel__track {
-  display: flex;
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
-.hero-sponsor-card {
+.hero-sponsor-slot {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 18px;
-  width: 100%;
-  min-width: 100%;
-  min-height: 184px;
+  gap: 12px;
+  width: 380px;
+  min-height: 242px;
   padding: 20px 22px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(18, 18, 26, 0.9), rgba(14, 14, 22, 0.86));
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(18, 18, 26, 0.72), rgba(14, 14, 22, 0.64));
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   color: var(--text-primary);
-  text-decoration: none;
   overflow: hidden;
-  transition: border-color 0.25s ease, transform 0.25s ease, background 0.25s ease;
 }
 
-.hero-sponsor-card::before {
+.hero-sponsor-slot::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 55%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent 58%);
   pointer-events: none;
 }
 
-.hero-sponsor-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.hero-sponsor-card:focus-visible {
-  outline: 2px solid rgba(216, 180, 254, 0.45);
-  outline-offset: 2px;
-}
-
-.hero-sponsor-card--trading212 {
-  background: linear-gradient(180deg, rgba(13, 20, 18, 0.9), rgba(11, 17, 15, 0.86));
-}
-
-.hero-sponsor-card--trading212::before {
-  background: linear-gradient(135deg, rgba(134, 239, 172, 0.06), transparent 58%);
-}
-
-.hero-sponsor-card__label {
+.hero-sponsor-slot__eyebrow {
   position: relative;
   z-index: 1;
   font-size: 0.68rem;
@@ -622,79 +577,26 @@ body {
   color: var(--text-muted);
 }
 
-.hero-sponsor-card__content {
+.hero-sponsor-slot strong,
+.hero-sponsor-slot p {
   position: relative;
   z-index: 1;
-  display: grid;
-  gap: 10px;
-  max-width: 30ch;
 }
 
-.hero-sponsor-card strong {
-  font-size: 1.18rem;
+.hero-sponsor-slot strong {
+  max-width: 24ch;
+  font-size: 1.12rem;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.35;
   letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
-.hero-sponsor-card__copy {
+.hero-sponsor-slot p {
+  max-width: 34ch;
   font-size: 0.92rem;
   line-height: 1.55;
   color: var(--text-secondary);
-}
-
-.hero-sponsor-card__footer {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.hero-sponsor-card__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-primary);
-}
-
-.hero-sponsor-card__status {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hero-sponsor-carousel__pagination {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.hero-sponsor-carousel__dot {
-  width: 22px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  transition: background 0.25s ease, transform 0.25s ease;
-}
-
-.hero-sponsor-carousel__dot.is-active {
-  background: rgba(255, 255, 255, 0.46);
-  transform: scaleX(1.05);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-sponsor-carousel__track {
-    transition: none;
-  }
 }
 
 /* ---------- RIGHT COLUMN ---------- */
@@ -1368,7 +1270,7 @@ body {
     width: 100%;
   }
 
-  .hero-sponsor-carousel {
+  .hero-sponsor-slot {
     order: 3;
     width: 340px;
   }
@@ -1407,7 +1309,7 @@ body {
     height: 390px;
   }
 
-  .hero-sponsor-carousel {
+  .hero-sponsor-slot {
     width: 100%;
   }
 
@@ -1420,18 +1322,13 @@ body {
     padding: 10px 16px;
   }
 
-  .hero-sponsor-card {
-    min-height: 172px;
+  .hero-sponsor-slot {
+    min-height: 200px;
     padding: 18px;
-    text-align: left;
   }
 
-  .hero-sponsor-card strong {
+  .hero-sponsor-slot strong {
     font-size: 1.05rem;
-  }
-
-  .hero-sponsor-card__cta {
-    white-space: normal;
   }
 
   .kb-mouse-grid {
