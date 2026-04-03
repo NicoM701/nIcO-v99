@@ -557,10 +557,8 @@ body {
 }
 
 .hero-affiliates__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 6px;
 }
 
 .hero-affiliates__title {
@@ -574,45 +572,45 @@ body {
 
 .hero-affiliates__meta {
   margin: 0;
-  max-width: 24ch;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.45;
   color: var(--text-muted);
-  text-align: right;
 }
 
 .hero-affiliates__viewport {
-  overflow: hidden;
-  border-radius: 14px;
-  touch-action: pan-y;
-  cursor: grab;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
 }
 
-.hero-affiliates__viewport:active {
-  cursor: grabbing;
-}
-
-.hero-affiliates__track {
-  display: flex;
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
+.hero-affiliates__viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .hero-affiliate-card {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 14px 16px;
-  width: 100%;
-  min-width: 100%;
-  min-height: 138px;
-  padding: 16px 16px 15px;
+  gap: 14px;
+  min-height: 146px;
+  padding: 16px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   background: linear-gradient(180deg, rgba(18, 18, 26, 0.9), rgba(14, 14, 22, 0.86));
   color: var(--text-primary);
   text-decoration: none;
   overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
@@ -642,10 +640,22 @@ body {
   background: linear-gradient(135deg, rgba(134, 239, 172, 0.05), transparent 60%);
 }
 
-.hero-affiliate-card__eyebrow {
+.hero-affiliate-card__top,
+.hero-affiliate-card__footer,
+.hero-affiliate-card__body {
   position: relative;
   z-index: 1;
-  margin-bottom: 6px;
+}
+
+.hero-affiliate-card__top,
+.hero-affiliate-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-affiliate-card__eyebrow {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -653,15 +663,25 @@ body {
   color: var(--text-muted);
 }
 
+.hero-affiliate-card__badge {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .hero-affiliate-card__body {
-  position: relative;
-  z-index: 1;
+  display: grid;
+  gap: 8px;
   min-width: 0;
 }
 
 .hero-affiliate-card__title {
   display: block;
-  margin-bottom: 7px;
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.35;
@@ -674,33 +694,6 @@ body {
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text-secondary);
-}
-
-.hero-affiliate-card__aside {
-  position: relative;
-  z-index: 1;
-  align-self: start;
-  justify-self: end;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.hero-affiliate-card__footer {
-  position: relative;
-  z-index: 1;
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 2px;
 }
 
 .hero-affiliate-card__cta {
@@ -1462,29 +1455,16 @@ body {
     padding: 16px;
   }
 
-  .hero-affiliates__header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .hero-affiliates__meta {
-    text-align: left;
-  }
-
   .hero-affiliate-card {
     min-height: 150px;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .hero-affiliate-card__aside {
-    justify-self: start;
+    gap: 12px;
   }
 
   .hero-affiliate-card__title {
     font-size: 0.98rem;
   }
 
+  .hero-affiliate-card__top,
   .hero-affiliate-card__footer {
     align-items: flex-start;
     flex-direction: column;

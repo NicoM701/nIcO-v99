@@ -11,24 +11,22 @@ const CROSSHAIR_CODE = 'CSGO-JQZpU-3m3wr-rv889-nUCtF-WHFFN';
 const CS_START_DATE_UTC = Date.UTC(2014, 11, 22, 15, 44, 9);
 const ROUTE_CACHE_TTL_MS = 30000;
 const HERO_AFFILIATE_AUTOPLAY_MS = 6400;
-const HERO_AFFILIATE_DRAG_THRESHOLD = 54;
-const HERO_AFFILIATE_CLICK_CANCEL_THRESHOLD = 10;
 const HERO_AFFILIATE_SLIDES = [
   {
     href: 'https://chatllm.abacus.ai/zkZsXzHxKD',
     ariaLabel: 'Open AbacusAI ChatLLM affiliate link',
-    eyebrow: 'Partner link',
-    title: 'AbacusAI · ChatLLM',
-    copy: 'One place for ChatGPT, Claude, Gemini and more without juggling tabs.',
+    eyebrow: 'Affiliate',
+    title: 'AbacusAI / ChatLLM',
+    copy: 'One place for ChatGPT, Claude, Gemini and other models without bouncing between tabs.',
     cta: 'Open ChatLLM ↗',
-    badge: 'AI'
+    badge: 'AI tools'
   },
   {
     href: 'https://www.trading212.com/invite/Hr6ADcl7',
-    ariaLabel: 'Open Trading212 affiliate link',
-    eyebrow: 'Partner link',
+    ariaLabel: 'Open Trading212 invite link',
+    eyebrow: 'Invite link',
     title: 'Trading212',
-    copy: 'A simple mobile-first investing app for stocks, ETFs and fractional shares.',
+    copy: 'A simple investing app for stocks, ETFs and fractional shares, with Nico’s invite link.',
     cta: 'Open invite ↗',
     badge: 'Investing',
     cardClass: 'hero-affiliate-card--trading212'
@@ -284,27 +282,27 @@ async function initHome() {
 function initHeroAffiliates() {
   const root = document.getElementById('heroAffiliates');
   const viewport = document.getElementById('heroAffiliatesViewport');
-  const track = document.getElementById('heroAffiliatesTrack');
   const pagination = document.getElementById('heroAffiliatesPagination');
 
-  if (!root || !viewport || !track || !pagination) return;
+  if (!root || !viewport || !pagination) return;
 
-  track.innerHTML = HERO_AFFILIATE_SLIDES.map((slide, index) => `
+  viewport.innerHTML = HERO_AFFILIATE_SLIDES.map((slide, index) => `
     <a
       href="${slide.href}"
       target="_blank"
       rel="noreferrer"
       class="hero-affiliate-card ${slide.cardClass || ''}"
       aria-label="${slide.ariaLabel}"
-      aria-hidden="${index === 0 ? 'false' : 'true'}"
-      tabindex="${index === 0 ? '0' : '-1'}"
+      data-index="${index}"
     >
+      <div class="hero-affiliate-card__top">
+        <span class="hero-affiliate-card__eyebrow">${slide.eyebrow}</span>
+        <span class="hero-affiliate-card__badge">${slide.badge}</span>
+      </div>
       <div class="hero-affiliate-card__body">
-        <div class="hero-affiliate-card__eyebrow">${slide.eyebrow}</div>
         <span class="hero-affiliate-card__title">${slide.title}</span>
         <span class="hero-affiliate-card__copy">${slide.copy}</span>
       </div>
-      <span class="hero-affiliate-card__aside">${slide.badge}</span>
       <div class="hero-affiliate-card__footer">
         <span class="hero-affiliate-card__cta">${slide.cta}</span>
         <span class="hero-affiliate-card__note">${index + 1}/${HERO_AFFILIATE_SLIDES.length}</span>
@@ -316,30 +314,40 @@ function initHeroAffiliates() {
     <span class="hero-affiliates__dot${index === 0 ? ' is-active' : ''}"></span>
   `).join('');
 
-  let currentIndex = 0;
-  let pointerId = null;
-  let dragStartX = 0;
-  let dragOffset = 0;
-  let isDragging = false;
-  let suppressClickUntil = 0;
-
-  const slides = Array.from(track.querySelectorAll('.hero-affiliate-card'));
+  const slides = Array.from(viewport.querySelectorAll('.hero-affiliate-card'));
   const dots = Array.from(pagination.querySelectorAll('.hero-affiliates__dot'));
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let currentIndex = 0;
+  let scrollSyncFrame = null;
 
-  const render = ({ immediate = false } = {}) => {
-    track.style.transition = immediate || isDragging || prefersReducedMotion ? 'none' : '';
-    track.style.transform = `translate3d(calc(${-currentIndex * 100}% + ${dragOffset}px), 0, 0)`;
-
-    slides.forEach((slide, index) => {
-      const active = index === currentIndex;
-      slide.setAttribute('aria-hidden', String(!active));
+  const updateActiveState = (index) => {
+    currentIndex = index;
+    dots.forEach((dot, dotIndex) => {
+      dot.classList.toggle('is-active', dotIndex === currentIndex);
+    });
+    slides.forEach((slide, slideIndex) => {
+      const active = slideIndex === currentIndex;
+      slide.setAttribute('aria-current', active ? 'true' : 'false');
       slide.tabIndex = active ? 0 : -1;
     });
+  };
 
-    dots.forEach((dot, index) => {
-      dot.classList.toggle('is-active', index === currentIndex);
+  const getNearestIndex = () => {
+    if (!slides.length) return 0;
+    const slideWidth = slides[0].getBoundingClientRect().width || viewport.clientWidth || 1;
+    return Math.max(0, Math.min(slides.length - 1, Math.round(viewport.scrollLeft / slideWidth)));
+  };
+
+  const goTo = (index, behavior = 'smooth') => {
+    const nextIndex = (index + slides.length) % slides.length;
+    const targetSlide = slides[nextIndex];
+    if (!targetSlide) return;
+
+    viewport.scrollTo({
+      left: targetSlide.offsetLeft,
+      behavior: prefersReducedMotion ? 'auto' : behavior
     });
+    updateActiveState(nextIndex);
   };
 
   const stopAutoplay = () => {
@@ -354,80 +362,16 @@ function initHeroAffiliates() {
     if (prefersReducedMotion || slides.length < 2) return;
 
     heroAffiliateInterval = window.setInterval(() => {
-      currentIndex = (currentIndex + 1) % slides.length;
-      dragOffset = 0;
-      render();
+      goTo(currentIndex + 1);
     }, HERO_AFFILIATE_AUTOPLAY_MS);
   };
 
-  const goTo = (index, options = {}) => {
-    currentIndex = (index + slides.length) % slides.length;
-    dragOffset = 0;
-    render(options);
-  };
-
-  const finishDrag = () => {
-    if (!isDragging) return;
-
-    const movedEnough = Math.abs(dragOffset) > HERO_AFFILIATE_DRAG_THRESHOLD;
-    const direction = dragOffset < 0 ? 1 : -1;
-
-    isDragging = false;
-
-    if (movedEnough) {
-      suppressClickUntil = Date.now() + 350;
-      goTo(currentIndex + direction);
-    } else {
-      dragOffset = 0;
-      render();
-    }
-
-    pointerId = null;
-    startAutoplay();
-  };
-
-  viewport.addEventListener('pointerdown', (event) => {
-    if (slides.length < 2) return;
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-
-    pointerId = event.pointerId;
-    dragStartX = event.clientX;
-    dragOffset = 0;
-    isDragging = true;
-    stopAutoplay();
-    viewport.setPointerCapture?.(pointerId);
-    render({ immediate: true });
-  });
-
-  viewport.addEventListener('pointermove', (event) => {
-    if (!isDragging || event.pointerId !== pointerId) return;
-
-    const maxOffset = viewport.clientWidth * 0.24;
-    dragOffset = Math.max(-maxOffset, Math.min(maxOffset, event.clientX - dragStartX));
-
-    if (Math.abs(dragOffset) > HERO_AFFILIATE_CLICK_CANCEL_THRESHOLD) {
-      suppressClickUntil = Date.now() + 350;
-    }
-
-    render({ immediate: true });
-  });
-
-  viewport.addEventListener('pointerup', (event) => {
-    if (event.pointerId !== pointerId) return;
-    viewport.releasePointerCapture?.(pointerId);
-    finishDrag();
-  });
-
-  viewport.addEventListener('pointercancel', () => {
-    dragOffset = 0;
-    finishDrag();
-  });
-
-  track.addEventListener('click', (event) => {
-    if (Date.now() < suppressClickUntil) {
-      event.preventDefault();
-    }
-  });
+  viewport.addEventListener('scroll', () => {
+    if (scrollSyncFrame) cancelAnimationFrame(scrollSyncFrame);
+    scrollSyncFrame = requestAnimationFrame(() => {
+      updateActiveState(getNearestIndex());
+    });
+  }, { passive: true });
 
   root.addEventListener('mouseenter', stopAutoplay);
   root.addEventListener('mouseleave', startAutoplay);
@@ -435,8 +379,13 @@ function initHeroAffiliates() {
   root.addEventListener('focusout', (event) => {
     if (!root.contains(event.relatedTarget)) startAutoplay();
   });
+  viewport.addEventListener('pointerdown', stopAutoplay, { passive: true });
+  viewport.addEventListener('pointerup', startAutoplay, { passive: true });
+  viewport.addEventListener('touchstart', stopAutoplay, { passive: true });
+  viewport.addEventListener('touchend', startAutoplay, { passive: true });
 
-  render({ immediate: true });
+  updateActiveState(0);
+  goTo(0, 'auto');
   startAutoplay();
 }
 
