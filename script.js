@@ -14,6 +14,32 @@ let configCache = null; // Cache config to avoid re-fetching on every nav
 let csElapsedInterval = null;
 let activeNavigationController = null;
 const routeCache = new Map();
+const HERO_SPONSOR_SLIDES = [
+  {
+    href: 'https://chatllm.abacus.ai/zkZsXzHxKD',
+    ariaLabel: 'Open AbacusAI ChatLLM affiliate link',
+    eyebrow: 'All top AI models. One subscription. $10.',
+    badge: 'Affiliate',
+    title: 'Newest models. One place.',
+    copy: 'ChatGPT, Claude, Gemini, Grok and more — without juggling separate subscriptions.',
+    cta: 'Try ChatLLM ↗',
+    pills: ['ChatGPT', 'Claude', 'Gemini']
+  },
+  {
+    href: 'https://www.trading212.com/invite/Hr6ADcl7',
+    ariaLabel: 'Open Trading212 affiliate link',
+    eyebrow: 'Commission-free investing. Clean app. Easy start.',
+    eyebrowClass: 'hero-sponsor-card__eyebrow--green',
+    badge: 'Affiliate',
+    badgeClass: 'hero-sponsor-card__badge--green',
+    title: 'Trading212 is live now.',
+    copy: 'Stocks, ETFs and fractional shares in a slick mobile-first flow — without turning the page into a finance circus.',
+    cta: 'Open Trading212 ↗',
+    cardClass: 'hero-sponsor-card--trading212',
+    pills: ['Stocks', 'ETFs', 'Fractional shares']
+  }
+];
+let sponsorCarouselInterval = null;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp, { once: true });
@@ -226,6 +252,11 @@ function handleRoute() {
     csElapsedInterval = null;
   }
 
+  if (sponsorCarouselInterval) {
+    clearInterval(sponsorCarouselInterval);
+    sponsorCarouselInterval = null;
+  }
+
   if (path === '/' || path.endsWith('index.html')) {
     initHome();
   } else if (path.includes('settings')) {
@@ -240,6 +271,8 @@ function handleRoute() {
 //  PAGE SPECIFIC INITS
 // ──────────────────────────────────────────
 async function initHome() {
+  initSponsorCarousel();
+
   // Home Overview
   const el = document.getElementById('settingsOverview');
   if (el) {
@@ -248,6 +281,102 @@ async function initHome() {
     else el.innerHTML = '<p style="color:var(--text-muted)">Could not load settings.</p>';
   }
 }
+
+function initSponsorCarousel() {
+  const root = document.getElementById('heroSponsorCarousel');
+  const track = document.getElementById('heroSponsorTrack');
+  const prevButton = document.getElementById('heroSponsorPrev');
+  const nextButton = document.getElementById('heroSponsorNext');
+
+  if (sponsorCarouselInterval) {
+    clearInterval(sponsorCarouselInterval);
+    sponsorCarouselInterval = null;
+  }
+
+  if (!root || !track || !prevButton || !nextButton) return;
+
+  track.innerHTML = HERO_SPONSOR_SLIDES.map((slide, index) => `
+    <a
+      href="${slide.href}"
+      target="_blank"
+      rel="noreferrer"
+      class="hero-sponsor-card ${slide.cardClass || ''}"
+      aria-label="${slide.ariaLabel}"
+      aria-hidden="${index === 0 ? 'false' : 'true'}"
+      tabindex="${index === 0 ? '0' : '-1'}"
+    >
+      <div class="hero-sponsor-card__topline">
+        <span class="hero-sponsor-card__eyebrow ${slide.eyebrowClass || ''}">${slide.eyebrow}</span>
+        <span class="hero-sponsor-card__badge ${slide.badgeClass || ''}">${slide.badge}</span>
+      </div>
+      <div class="hero-sponsor-card__content">
+        <strong>${slide.title}</strong>
+        <span class="hero-sponsor-card__copy">${slide.copy}</span>
+        <div class="hero-sponsor-card__pill-row" aria-hidden="true">
+          ${slide.pills.map((pill) => `<span class="hero-sponsor-card__pill">${pill}</span>`).join('')}
+        </div>
+      </div>
+      <div class="hero-sponsor-card__footer">
+        <span class="hero-sponsor-card__cta">${slide.cta}</span>
+        <span class="hero-sponsor-card__status">${index + 1}/${HERO_SPONSOR_SLIDES.length}</span>
+      </div>
+    </a>
+  `).join('');
+
+  let currentIndex = 0;
+  const slides = Array.from(track.querySelectorAll('.hero-sponsor-card'));
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const render = () => {
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    root.dataset.activeSlide = String(currentIndex);
+
+    slides.forEach((slide, index) => {
+      const active = index === currentIndex;
+      slide.setAttribute('aria-hidden', String(!active));
+      slide.tabIndex = active ? 0 : -1;
+    });
+  };
+
+  const goTo = (nextIndex) => {
+    currentIndex = (nextIndex + slides.length) % slides.length;
+    render();
+  };
+
+  const restartAutoplay = () => {
+    if (sponsorCarouselInterval) clearInterval(sponsorCarouselInterval);
+    if (prefersReducedMotion || slides.length < 2) return;
+    sponsorCarouselInterval = window.setInterval(() => {
+      goTo(currentIndex + 1);
+    }, 5500);
+  };
+
+  prevButton.addEventListener('click', () => {
+    goTo(currentIndex - 1);
+    restartAutoplay();
+  });
+
+  nextButton.addEventListener('click', () => {
+    goTo(currentIndex + 1);
+    restartAutoplay();
+  });
+
+  root.addEventListener('mouseenter', () => {
+    if (sponsorCarouselInterval) clearInterval(sponsorCarouselInterval);
+  });
+
+  root.addEventListener('mouseleave', restartAutoplay);
+  root.addEventListener('focusin', () => {
+    if (sponsorCarouselInterval) clearInterval(sponsorCarouselInterval);
+  });
+  root.addEventListener('focusout', (event) => {
+    if (!root.contains(event.relatedTarget)) restartAutoplay();
+  });
+
+  render();
+  restartAutoplay();
+}
+
 
 async function initSettings() {
   const grid = document.getElementById('settingsGrid');
