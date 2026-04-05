@@ -291,6 +291,7 @@ function initHeroAffiliates() {
       href="${slide.href}"
       target="_blank"
       rel="noreferrer"
+      draggable="false"
       class="hero-affiliate-card ${slide.cardClass || ''}"
       aria-label="${slide.ariaLabel}"
       data-index="${index}"
@@ -451,6 +452,10 @@ function initHeroAffiliates() {
       resetDrag();
     }
   }, true);
+
+  viewport.addEventListener('dragstart', (event) => {
+    event.preventDefault();
+  });
 
   root.addEventListener('mouseenter', stopAutoplay);
   root.addEventListener('mouseleave', startAutoplay);
