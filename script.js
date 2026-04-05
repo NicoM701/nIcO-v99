@@ -500,7 +500,7 @@ async function initSettings() {
       renderSettings(grid, buildSettings(v), v);
 
       const affiliateSlot = document.createElement('section');
-      affiliateSlot.className = 'hero-affiliates hero-affiliates--settings';
+      affiliateSlot.className = 'hero-affiliates hero-affiliates--settings hero-affiliates--settings-flat';
       affiliateSlot.id = 'settingsAffiliateSlot';
       affiliateSlot.setAttribute('aria-label', 'Partner links');
       affiliateSlot.innerHTML = `
