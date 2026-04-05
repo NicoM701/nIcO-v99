@@ -384,6 +384,8 @@ function initHeroAffiliates() {
     dragPointerId = null;
     dragDirection = null;
     dragMoved = false;
+    viewport.classList.remove('is-pointer-down');
+    viewport.classList.remove('is-dragging-x');
   };
 
   viewport.addEventListener('pointerdown', (event) => {
@@ -394,6 +396,7 @@ function initHeroAffiliates() {
     dragStartScrollLeft = viewport.scrollLeft;
     dragDirection = null;
     dragMoved = false;
+    viewport.classList.add('is-pointer-down');
     stopAutoplay();
   });
 
@@ -408,6 +411,7 @@ function initHeroAffiliates() {
       dragDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y';
       if (dragDirection === 'x') {
         dragMoved = true;
+        viewport.classList.add('is-dragging-x');
         viewport.setPointerCapture?.(event.pointerId);
       }
     }

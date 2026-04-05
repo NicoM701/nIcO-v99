@@ -570,6 +570,18 @@ body {
   display: none;
 }
 
+.hero-affiliates__viewport.is-pointer-down {
+  cursor: grab;
+}
+
+.hero-affiliates__viewport.is-dragging-x {
+  cursor: grabbing;
+}
+
+.hero-affiliates__viewport.is-dragging-x .hero-affiliate-card {
+  pointer-events: none;
+}
+
 .hero-affiliate-card {
   position: relative;
   display: grid;
@@ -609,11 +621,11 @@ body {
 }
 
 .hero-affiliate-card--trading212 {
-  background: linear-gradient(180deg, rgba(13, 20, 18, 0.9), rgba(11, 17, 15, 0.86));
+  background: linear-gradient(180deg, rgba(14, 20, 34, 0.92), rgba(10, 16, 28, 0.88));
 }
 
 .hero-affiliate-card--trading212::before {
-  background: linear-gradient(135deg, rgba(134, 239, 172, 0.05), transparent 60%);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.09), transparent 60%);
 }
 
 .hero-affiliate-card__top,
