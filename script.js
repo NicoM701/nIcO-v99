@@ -509,7 +509,7 @@ async function initSettings() {
       `;
       grid.appendChild(affiliateSlot);
       initHeroAffiliates({
-        rootId: 'settingsHeroAffiliates',
+        rootId: 'settingsAffiliateSlot',
         viewportId: 'settingsHeroAffiliatesViewport',
         paginationId: 'settingsHeroAffiliatesPagination'
       });
