@@ -925,6 +925,15 @@ body {
   grid-column: span 1;
 }
 
+.settings-card--affiliate {
+  padding: 20px 24px 18px;
+}
+
+.hero-affiliates--settings {
+  width: 100%;
+  padding-top: 0;
+}
+
 .settings-card:hover {
   border-color: rgba(147, 51, 234, 0.22);
   box-shadow: 0 4px 30px rgba(147, 51, 234, 0.06);

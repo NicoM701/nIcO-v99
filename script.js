@@ -279,10 +279,10 @@ async function initHome() {
   }
 }
 
-function initHeroAffiliates() {
-  const root = document.getElementById('heroAffiliates');
-  const viewport = document.getElementById('heroAffiliatesViewport');
-  const pagination = document.getElementById('heroAffiliatesPagination');
+function initHeroAffiliates(options = {}) {
+  const root = document.getElementById(options.rootId || 'heroAffiliates');
+  const viewport = document.getElementById(options.viewportId || 'heroAffiliatesViewport');
+  const pagination = document.getElementById(options.paginationId || 'heroAffiliatesPagination');
 
   if (!root || !viewport || !pagination) return;
 
@@ -477,6 +477,11 @@ function initHeroAffiliates() {
 async function initSettings() {
   const grid = document.getElementById('settingsGrid');
   const kbWrap = document.getElementById('keyboardWrap');
+  const existingAffiliateSlot = document.getElementById('settingsAffiliateSlot');
+
+  if (existingAffiliateSlot) {
+    existingAffiliateSlot.remove();
+  }
 
   if (grid) {
     grid.innerHTML = `
@@ -493,6 +498,22 @@ async function initSettings() {
       grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center">Could not load config.cfg</p>';
     } else {
       renderSettings(grid, buildSettings(v), v);
+
+      const affiliateSlot = document.createElement('div');
+      affiliateSlot.className = 'settings-card settings-card--affiliate';
+      affiliateSlot.id = 'settingsAffiliateSlot';
+      affiliateSlot.innerHTML = `
+        <section class="hero-affiliates hero-affiliates--settings" id="settingsHeroAffiliates" aria-label="Partner links">
+          <div class="hero-affiliates__viewport" id="settingsHeroAffiliatesViewport" aria-live="polite"></div>
+          <div class="hero-affiliates__pagination" id="settingsHeroAffiliatesPagination" aria-hidden="true"></div>
+        </section>
+      `;
+      grid.appendChild(affiliateSlot);
+      initHeroAffiliates({
+        rootId: 'settingsHeroAffiliates',
+        viewportId: 'settingsHeroAffiliatesViewport',
+        paginationId: 'settingsHeroAffiliatesPagination'
+      });
     }
   }
 
