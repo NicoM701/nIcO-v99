@@ -944,6 +944,23 @@ body {
 
 .hero-affiliates--settings .hero-affiliate-card {
   min-height: 162px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-affiliates--settings .hero-affiliate-card::before {
+  display: none;
+}
+
+.hero-affiliates--settings .hero-affiliate-card:hover {
+  transform: translateY(-2px);
+  border-color: transparent;
+}
+
+.hero-affiliates--settings .hero-affiliate-card:focus-visible {
+  outline-offset: 0;
 }
 
 .settings-card:hover {
