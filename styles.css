@@ -546,35 +546,8 @@ body {
 .hero-affiliates {
   width: 380px;
   display: grid;
-  gap: 14px;
-  padding: 18px 20px 16px;
-  background: var(--bg-settings);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  gap: 10px;
   animation: fadeInUp 0.55s ease-out both;
-}
-
-.hero-affiliates__header {
-  display: grid;
-  gap: 6px;
-}
-
-.hero-affiliates__title {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--purple-400);
-}
-
-.hero-affiliates__meta {
-  margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--text-muted);
 }
 
 .hero-affiliates__viewport {
@@ -584,12 +557,12 @@ body {
   gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
   scrollbar-width: none;
 }
 
@@ -602,6 +575,7 @@ body {
   display: grid;
   gap: 14px;
   min-height: 146px;
+  width: 100%;
   padding: 16px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -713,6 +687,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 6px;
+  padding-bottom: 2px;
 }
 
 .hero-affiliates__dot {
