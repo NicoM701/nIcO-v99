@@ -499,14 +499,13 @@ async function initSettings() {
     } else {
       renderSettings(grid, buildSettings(v), v);
 
-      const affiliateSlot = document.createElement('div');
-      affiliateSlot.className = 'settings-card settings-card--affiliate';
+      const affiliateSlot = document.createElement('section');
+      affiliateSlot.className = 'hero-affiliates hero-affiliates--settings';
       affiliateSlot.id = 'settingsAffiliateSlot';
+      affiliateSlot.setAttribute('aria-label', 'Partner links');
       affiliateSlot.innerHTML = `
-        <section class="hero-affiliates hero-affiliates--settings" id="settingsHeroAffiliates" aria-label="Partner links">
-          <div class="hero-affiliates__viewport" id="settingsHeroAffiliatesViewport" aria-live="polite"></div>
-          <div class="hero-affiliates__pagination" id="settingsHeroAffiliatesPagination" aria-hidden="true"></div>
-        </section>
+        <div class="hero-affiliates__viewport" id="settingsHeroAffiliatesViewport" aria-live="polite"></div>
+        <div class="hero-affiliates__pagination" id="settingsHeroAffiliatesPagination" aria-hidden="true"></div>
       `;
       grid.appendChild(affiliateSlot);
       initHeroAffiliates({
