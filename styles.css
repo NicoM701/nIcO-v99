@@ -547,6 +547,7 @@ body {
   width: 380px;
   display: grid;
   gap: 10px;
+  padding-top: 4px;
   animation: fadeInUp 0.55s ease-out both;
 }
 
@@ -556,7 +557,8 @@ body {
   grid-auto-columns: 100%;
   gap: 12px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
+  padding-top: 2px;
   padding-bottom: 2px;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
