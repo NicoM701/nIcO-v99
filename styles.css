@@ -55,6 +55,25 @@ body {
   line-height: 1.6;
 }
 
+::selection {
+  background: rgba(168, 85, 247, 0.38);
+  color: #fff;
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background: rgba(168, 85, 247, 0.38);
+  color: #fff;
+  text-shadow: none;
+}
+
+img,
+svg,
+video {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 /* ---------- BACKGROUND ---------- */
 .bg-video-wrap {
   position: fixed;
