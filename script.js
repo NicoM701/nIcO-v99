@@ -286,14 +286,17 @@ function initHeroAffiliates(options = {}) {
 
   if (!root || !viewport || !pagination) return;
 
-  const hasForwardOverflow = HERO_AFFILIATE_SLIDES.length > 1;
-  const renderedSlides = hasForwardOverflow
-    ? [...HERO_AFFILIATE_SLIDES, { ...HERO_AFFILIATE_SLIDES[0], realIndex: 0, isClone: true }]
-    : HERO_AFFILIATE_SLIDES;
+  const slideCount = HERO_AFFILIATE_SLIDES.length;
+  const hasLoop = slideCount > 1;
+  const renderedSlides = hasLoop
+    ? [
+        { ...HERO_AFFILIATE_SLIDES[slideCount - 1], realIndex: slideCount - 1, isClone: true },
+        ...HERO_AFFILIATE_SLIDES.map((slide, index) => ({ ...slide, realIndex: index })),
+        { ...HERO_AFFILIATE_SLIDES[0], realIndex: 0, isClone: true }
+      ]
+    : HERO_AFFILIATE_SLIDES.map((slide, index) => ({ ...slide, realIndex: index }));
 
-  viewport.innerHTML = renderedSlides.map((slide, index) => {
-    const realIndex = slide.realIndex ?? index;
-    return `
+  viewport.innerHTML = renderedSlides.map((slide, index) => `
     <a
       href="${slide.href}"
       target="_blank"
@@ -302,7 +305,7 @@ function initHeroAffiliates(options = {}) {
       class="hero-affiliate-card ${slide.cardClass || ''}${slide.isClone ? ' hero-affiliate-card--clone' : ''}"
       aria-label="${slide.ariaLabel}"
       data-index="${index}"
-      data-real-index="${realIndex}"
+      data-real-index="${slide.realIndex}"
       ${slide.isClone ? 'data-clone="true"' : ''}
     >
       <div class="hero-affiliate-card__top">
@@ -315,11 +318,10 @@ function initHeroAffiliates(options = {}) {
       </div>
       <div class="hero-affiliate-card__footer">
         <span class="hero-affiliate-card__cta">${slide.cta}</span>
-        <span class="hero-affiliate-card__note">${realIndex + 1}/${HERO_AFFILIATE_SLIDES.length}</span>
+        <span class="hero-affiliate-card__note">${slide.realIndex + 1}/${slideCount}</span>
       </div>
     </a>
-  `;
-  }).join('');
+  `).join('');
 
   pagination.innerHTML = HERO_AFFILIATE_SLIDES.map((_, index) => `
     <span class="hero-affiliates__dot${index === 0 ? ' is-active' : ''}"></span>
@@ -328,34 +330,49 @@ function initHeroAffiliates(options = {}) {
   const slides = Array.from(viewport.querySelectorAll('.hero-affiliate-card'));
   const dots = Array.from(pagination.querySelectorAll('.hero-affiliates__dot'));
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const lastRealIndex = HERO_AFFILIATE_SLIDES.length - 1;
-  const cloneIndex = hasForwardOverflow ? slides.length - 1 : -1;
+  const firstRenderedIndex = hasLoop ? 1 : 0;
+  const lastRenderedIndex = hasLoop ? slideCount : slideCount - 1;
+  const leadingCloneIndex = hasLoop ? 0 : -1;
+  const trailingCloneIndex = hasLoop ? slides.length - 1 : -1;
+  const lastRealIndex = slideCount - 1;
 
   let currentIndex = 0;
-  let currentRenderedIndex = 0;
+  let currentRenderedIndex = firstRenderedIndex;
   let scrollSyncFrame = null;
-  let forwardWrapTimeout = null;
-  let forwardWrapScrollEndHandler = null;
-  let isForwardWrapping = false;
+  let loopResetTimeout = null;
+  let loopResetScrollEndHandler = null;
+  let pendingLoopTargetRealIndex = null;
+  let isLoopResetting = false;
   let autoplayResumeQueued = false;
   let dragPointerId = null;
   let dragStartX = 0;
   let dragStartY = 0;
   let dragStartScrollLeft = 0;
-  let dragStartRenderedIndex = 0;
+  let dragStartRenderedIndex = firstRenderedIndex;
   let dragDirection = null;
   let dragMoved = false;
 
-  const clearForwardWrapReset = () => {
-    if (forwardWrapTimeout) {
-      clearTimeout(forwardWrapTimeout);
-      forwardWrapTimeout = null;
+  const clearLoopReset = () => {
+    if (loopResetTimeout) {
+      clearTimeout(loopResetTimeout);
+      loopResetTimeout = null;
     }
 
-    if (forwardWrapScrollEndHandler) {
-      viewport.removeEventListener('scrollend', forwardWrapScrollEndHandler);
-      forwardWrapScrollEndHandler = null;
+    if (loopResetScrollEndHandler) {
+      viewport.removeEventListener('scrollend', loopResetScrollEndHandler);
+      loopResetScrollEndHandler = null;
     }
+  };
+
+  const withInstantReset = (callback) => {
+    viewport.classList.add('is-resetting');
+    callback();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        viewport.classList.remove('is-resetting');
+      });
+    });
   };
 
   const updateActiveState = (renderedIndex) => {
@@ -378,9 +395,9 @@ function initHeroAffiliates(options = {}) {
   };
 
   const getNearestRenderedIndex = () => {
-    if (!slides.length) return 0;
+    if (!slides.length) return firstRenderedIndex;
 
-    let nearestIndex = 0;
+    let nearestIndex = firstRenderedIndex;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
     slides.forEach((slide, index) => {
@@ -406,29 +423,26 @@ function initHeroAffiliates(options = {}) {
     updateActiveState(targetIndex);
   };
 
-  const goToRealIndex = (realIndex, behavior = 'smooth') => {
-    const normalizedIndex = ((realIndex % HERO_AFFILIATE_SLIDES.length) + HERO_AFFILIATE_SLIDES.length) % HERO_AFFILIATE_SLIDES.length;
-    goToRenderedIndex(normalizedIndex, behavior);
+  const getRenderedIndexForReal = (realIndex) => {
+    const normalized = ((realIndex % slideCount) + slideCount) % slideCount;
+    return hasLoop ? normalized + 1 : normalized;
   };
 
-  const finishForwardWrapReset = () => {
-    if (!isForwardWrapping) return;
+  const goToRealIndex = (realIndex, behavior = 'smooth') => {
+    goToRenderedIndex(getRenderedIndexForReal(realIndex), behavior);
+  };
 
-    clearForwardWrapReset();
-    viewport.classList.add('is-resetting');
-    viewport.scrollTo({
-      left: slides[0]?.offsetLeft ?? 0,
-      behavior: 'auto'
+  const finishLoopReset = () => {
+    if (!isLoopResetting || pendingLoopTargetRealIndex === null) return;
+
+    const targetRealIndex = pendingLoopTargetRealIndex;
+    clearLoopReset();
+    pendingLoopTargetRealIndex = null;
+    isLoopResetting = false;
+
+    withInstantReset(() => {
+      goToRenderedIndex(getRenderedIndexForReal(targetRealIndex), 'auto');
     });
-    updateActiveState(0);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        viewport.classList.remove('is-resetting');
-      });
-    });
-
-    isForwardWrapping = false;
 
     if (autoplayResumeQueued) {
       autoplayResumeQueued = false;
@@ -436,40 +450,52 @@ function initHeroAffiliates(options = {}) {
     }
   };
 
-  const scheduleForwardWrapReset = () => {
-    if (!hasForwardOverflow || cloneIndex < 0) return;
+  const scheduleLoopReset = (targetRealIndex) => {
+    if (!hasLoop) return;
 
-    clearForwardWrapReset();
-    isForwardWrapping = true;
-    forwardWrapScrollEndHandler = () => {
-      finishForwardWrapReset();
+    clearLoopReset();
+    pendingLoopTargetRealIndex = targetRealIndex;
+    isLoopResetting = true;
+
+    loopResetScrollEndHandler = () => {
+      finishLoopReset();
     };
 
-    viewport.addEventListener('scrollend', forwardWrapScrollEndHandler, { once: true });
-    forwardWrapTimeout = window.setTimeout(finishForwardWrapReset, prefersReducedMotion ? 0 : 460);
+    viewport.addEventListener('scrollend', loopResetScrollEndHandler, { once: true });
+    loopResetTimeout = window.setTimeout(finishLoopReset, prefersReducedMotion ? 0 : 460);
+  };
+
+  const cancelLoopReset = ({ resolvePending = false } = {}) => {
+    if (resolvePending && isLoopResetting) {
+      finishLoopReset();
+      return;
+    }
+
+    clearLoopReset();
+    pendingLoopTargetRealIndex = null;
+    isLoopResetting = false;
+    autoplayResumeQueued = false;
   };
 
   const goToNext = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
-    if (hasForwardOverflow && fromRenderedIndex === lastRealIndex) {
-      goToRenderedIndex(cloneIndex, behavior);
-      scheduleForwardWrapReset();
+    if (hasLoop && fromRenderedIndex >= lastRenderedIndex) {
+      goToRenderedIndex(trailingCloneIndex, behavior);
+      scheduleLoopReset(0);
       return;
     }
 
-    goToRenderedIndex(Math.min(lastRealIndex, fromRenderedIndex + 1), behavior);
+    goToRenderedIndex(Math.min(lastRenderedIndex, fromRenderedIndex + 1), behavior);
   };
 
   const goToPrevious = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
-    clearForwardWrapReset();
-    isForwardWrapping = false;
-    autoplayResumeQueued = false;
-
-    if (fromRenderedIndex <= 0) {
-      goToRealIndex(lastRealIndex, behavior);
+    if (hasLoop && fromRenderedIndex <= firstRenderedIndex) {
+      goToRenderedIndex(leadingCloneIndex, behavior);
+      scheduleLoopReset(lastRealIndex);
       return;
     }
 
-    goToRenderedIndex(fromRenderedIndex - 1, behavior);
+    cancelLoopReset();
+    goToRenderedIndex(Math.max(firstRenderedIndex, fromRenderedIndex - 1), behavior);
   };
 
   const stopAutoplay = () => {
@@ -480,14 +506,14 @@ function initHeroAffiliates(options = {}) {
   };
 
   const startAutoplay = () => {
-    if (isForwardWrapping) {
+    if (isLoopResetting) {
       autoplayResumeQueued = true;
       return;
     }
 
     autoplayResumeQueued = false;
     stopAutoplay();
-    if (prefersReducedMotion || HERO_AFFILIATE_SLIDES.length < 2) return;
+    if (prefersReducedMotion || slideCount < 2) return;
 
     heroAffiliateInterval = window.setInterval(() => {
       goToNext();
@@ -515,11 +541,7 @@ function initHeroAffiliates(options = {}) {
   viewport.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
-    if (isForwardWrapping) {
-      finishForwardWrapReset();
-    } else {
-      clearForwardWrapReset();
-    }
+    cancelLoopReset({ resolvePending: true });
 
     dragPointerId = event.pointerId;
     dragStartX = event.clientX;
@@ -568,6 +590,7 @@ function initHeroAffiliates(options = {}) {
       } else if (deltaX >= threshold) {
         goToPrevious('smooth', dragStartRenderedIndex);
       } else {
+        cancelLoopReset();
         goToRenderedIndex(dragStartRenderedIndex);
       }
     }
@@ -577,9 +600,7 @@ function initHeroAffiliates(options = {}) {
   });
 
   viewport.addEventListener('pointercancel', () => {
-    clearForwardWrapReset();
-    isForwardWrapping = false;
-    autoplayResumeQueued = false;
+    cancelLoopReset();
     resetDrag();
     startAutoplay();
   });
@@ -603,8 +624,8 @@ function initHeroAffiliates(options = {}) {
     if (!root.contains(event.relatedTarget)) startAutoplay();
   });
 
-  updateActiveState(0);
-  goToRealIndex(0, 'auto');
+  updateActiveState(firstRenderedIndex);
+  goToRenderedIndex(firstRenderedIndex, 'auto');
   startAutoplay();
 }
 
