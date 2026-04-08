@@ -334,7 +334,10 @@ function initHeroAffiliates(options = {}) {
   let currentIndex = 0;
   let currentRenderedIndex = 0;
   let scrollSyncFrame = null;
-  let forwardWrapFrame = null;
+  let forwardWrapTimeout = null;
+  let forwardWrapScrollEndHandler = null;
+  let isForwardWrapping = false;
+  let autoplayResumeQueued = false;
   let dragPointerId = null;
   let dragStartX = 0;
   let dragStartY = 0;
@@ -343,10 +346,15 @@ function initHeroAffiliates(options = {}) {
   let dragDirection = null;
   let dragMoved = false;
 
-  const cancelForwardWrapReset = () => {
-    if (forwardWrapFrame) {
-      cancelAnimationFrame(forwardWrapFrame);
-      forwardWrapFrame = null;
+  const clearForwardWrapReset = () => {
+    if (forwardWrapTimeout) {
+      clearTimeout(forwardWrapTimeout);
+      forwardWrapTimeout = null;
+    }
+
+    if (forwardWrapScrollEndHandler) {
+      viewport.removeEventListener('scrollend', forwardWrapScrollEndHandler);
+      forwardWrapScrollEndHandler = null;
     }
   };
 
@@ -403,26 +411,42 @@ function initHeroAffiliates(options = {}) {
     goToRenderedIndex(normalizedIndex, behavior);
   };
 
+  const finishForwardWrapReset = () => {
+    if (!isForwardWrapping) return;
+
+    clearForwardWrapReset();
+    viewport.classList.add('is-resetting');
+    viewport.scrollTo({
+      left: slides[0]?.offsetLeft ?? 0,
+      behavior: 'auto'
+    });
+    updateActiveState(0);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        viewport.classList.remove('is-resetting');
+      });
+    });
+
+    isForwardWrapping = false;
+
+    if (autoplayResumeQueued) {
+      autoplayResumeQueued = false;
+      startAutoplay();
+    }
+  };
+
   const scheduleForwardWrapReset = () => {
     if (!hasForwardOverflow || cloneIndex < 0) return;
-    cancelForwardWrapReset();
 
-    const cloneOffsetLeft = slides[cloneIndex]?.offsetLeft ?? 0;
-    const settle = () => {
-      if (Math.abs(viewport.scrollLeft - cloneOffsetLeft) <= 2) {
-        viewport.scrollTo({
-          left: slides[0]?.offsetLeft ?? 0,
-          behavior: 'auto'
-        });
-        updateActiveState(0);
-        forwardWrapFrame = null;
-        return;
-      }
-
-      forwardWrapFrame = requestAnimationFrame(settle);
+    clearForwardWrapReset();
+    isForwardWrapping = true;
+    forwardWrapScrollEndHandler = () => {
+      finishForwardWrapReset();
     };
 
-    forwardWrapFrame = requestAnimationFrame(settle);
+    viewport.addEventListener('scrollend', forwardWrapScrollEndHandler, { once: true });
+    forwardWrapTimeout = window.setTimeout(finishForwardWrapReset, prefersReducedMotion ? 0 : 460);
   };
 
   const goToNext = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
@@ -436,7 +460,9 @@ function initHeroAffiliates(options = {}) {
   };
 
   const goToPrevious = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
-    cancelForwardWrapReset();
+    clearForwardWrapReset();
+    isForwardWrapping = false;
+    autoplayResumeQueued = false;
 
     if (fromRenderedIndex <= 0) {
       goToRealIndex(lastRealIndex, behavior);
@@ -454,6 +480,12 @@ function initHeroAffiliates(options = {}) {
   };
 
   const startAutoplay = () => {
+    if (isForwardWrapping) {
+      autoplayResumeQueued = true;
+      return;
+    }
+
+    autoplayResumeQueued = false;
     stopAutoplay();
     if (prefersReducedMotion || HERO_AFFILIATE_SLIDES.length < 2) return;
 
@@ -482,7 +514,13 @@ function initHeroAffiliates(options = {}) {
 
   viewport.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    cancelForwardWrapReset();
+
+    if (isForwardWrapping) {
+      finishForwardWrapReset();
+    } else {
+      clearForwardWrapReset();
+    }
+
     dragPointerId = event.pointerId;
     dragStartX = event.clientX;
     dragStartY = event.clientY;
@@ -539,7 +577,9 @@ function initHeroAffiliates(options = {}) {
   });
 
   viewport.addEventListener('pointercancel', () => {
-    cancelForwardWrapReset();
+    clearForwardWrapReset();
+    isForwardWrapping = false;
+    autoplayResumeQueued = false;
     resetDrag();
     startAutoplay();
   });

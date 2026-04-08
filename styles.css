@@ -599,6 +599,11 @@ video {
   cursor: grabbing;
 }
 
+.hero-affiliates__viewport.is-resetting {
+  scroll-behavior: auto;
+  scroll-snap-type: none;
+}
+
 .hero-affiliates__viewport.is-dragging-x .hero-affiliate-card {
   pointer-events: none;
 }
