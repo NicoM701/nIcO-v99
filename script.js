@@ -286,15 +286,24 @@ function initHeroAffiliates(options = {}) {
 
   if (!root || !viewport || !pagination) return;
 
-  viewport.innerHTML = HERO_AFFILIATE_SLIDES.map((slide, index) => `
+  const hasForwardOverflow = HERO_AFFILIATE_SLIDES.length > 1;
+  const renderedSlides = hasForwardOverflow
+    ? [...HERO_AFFILIATE_SLIDES, { ...HERO_AFFILIATE_SLIDES[0], realIndex: 0, isClone: true }]
+    : HERO_AFFILIATE_SLIDES;
+
+  viewport.innerHTML = renderedSlides.map((slide, index) => {
+    const realIndex = slide.realIndex ?? index;
+    return `
     <a
       href="${slide.href}"
       target="_blank"
       rel="noreferrer"
       draggable="false"
-      class="hero-affiliate-card ${slide.cardClass || ''}"
+      class="hero-affiliate-card ${slide.cardClass || ''}${slide.isClone ? ' hero-affiliate-card--clone' : ''}"
       aria-label="${slide.ariaLabel}"
       data-index="${index}"
+      data-real-index="${realIndex}"
+      ${slide.isClone ? 'data-clone="true"' : ''}
     >
       <div class="hero-affiliate-card__top">
         <span class="hero-affiliate-card__eyebrow">${slide.eyebrow}</span>
@@ -306,10 +315,11 @@ function initHeroAffiliates(options = {}) {
       </div>
       <div class="hero-affiliate-card__footer">
         <span class="hero-affiliate-card__cta">${slide.cta}</span>
-        <span class="hero-affiliate-card__note">${index + 1}/${HERO_AFFILIATE_SLIDES.length}</span>
+        <span class="hero-affiliate-card__note">${realIndex + 1}/${HERO_AFFILIATE_SLIDES.length}</span>
       </div>
     </a>
-  `).join('');
+  `;
+  }).join('');
 
   pagination.innerHTML = HERO_AFFILIATE_SLIDES.map((_, index) => `
     <span class="hero-affiliates__dot${index === 0 ? ' is-active' : ''}"></span>
@@ -318,43 +328,122 @@ function initHeroAffiliates(options = {}) {
   const slides = Array.from(viewport.querySelectorAll('.hero-affiliate-card'));
   const dots = Array.from(pagination.querySelectorAll('.hero-affiliates__dot'));
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const lastRealIndex = HERO_AFFILIATE_SLIDES.length - 1;
+  const cloneIndex = hasForwardOverflow ? slides.length - 1 : -1;
+
   let currentIndex = 0;
+  let currentRenderedIndex = 0;
   let scrollSyncFrame = null;
+  let forwardWrapFrame = null;
   let dragPointerId = null;
   let dragStartX = 0;
   let dragStartY = 0;
   let dragStartScrollLeft = 0;
+  let dragStartRenderedIndex = 0;
   let dragDirection = null;
   let dragMoved = false;
 
-  const updateActiveState = (index) => {
-    currentIndex = index;
+  const cancelForwardWrapReset = () => {
+    if (forwardWrapFrame) {
+      cancelAnimationFrame(forwardWrapFrame);
+      forwardWrapFrame = null;
+    }
+  };
+
+  const updateActiveState = (renderedIndex) => {
+    const safeRenderedIndex = Math.max(0, Math.min(slides.length - 1, renderedIndex));
+    const activeSlide = slides[safeRenderedIndex];
+    const activeRealIndex = Number(activeSlide?.dataset.realIndex ?? 0);
+
+    currentRenderedIndex = safeRenderedIndex;
+    currentIndex = activeRealIndex;
+
     dots.forEach((dot, dotIndex) => {
-      dot.classList.toggle('is-active', dotIndex === currentIndex);
+      dot.classList.toggle('is-active', dotIndex === activeRealIndex);
     });
+
     slides.forEach((slide, slideIndex) => {
-      const active = slideIndex === currentIndex;
+      const active = slideIndex === safeRenderedIndex;
       slide.setAttribute('aria-current', active ? 'true' : 'false');
       slide.tabIndex = active ? 0 : -1;
     });
   };
 
-  const getNearestIndex = () => {
+  const getNearestRenderedIndex = () => {
     if (!slides.length) return 0;
-    const slideWidth = slides[0].getBoundingClientRect().width || viewport.clientWidth || 1;
-    return Math.max(0, Math.min(slides.length - 1, Math.round(viewport.scrollLeft / slideWidth)));
+
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    slides.forEach((slide, index) => {
+      const distance = Math.abs(viewport.scrollLeft - slide.offsetLeft);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex;
   };
 
-  const goTo = (index, behavior = 'smooth') => {
-    const nextIndex = (index + slides.length) % slides.length;
-    const targetSlide = slides[nextIndex];
+  const goToRenderedIndex = (renderedIndex, behavior = 'smooth') => {
+    const targetIndex = Math.max(0, Math.min(slides.length - 1, renderedIndex));
+    const targetSlide = slides[targetIndex];
     if (!targetSlide) return;
 
     viewport.scrollTo({
       left: targetSlide.offsetLeft,
       behavior: prefersReducedMotion ? 'auto' : behavior
     });
-    updateActiveState(nextIndex);
+    updateActiveState(targetIndex);
+  };
+
+  const goToRealIndex = (realIndex, behavior = 'smooth') => {
+    const normalizedIndex = ((realIndex % HERO_AFFILIATE_SLIDES.length) + HERO_AFFILIATE_SLIDES.length) % HERO_AFFILIATE_SLIDES.length;
+    goToRenderedIndex(normalizedIndex, behavior);
+  };
+
+  const scheduleForwardWrapReset = () => {
+    if (!hasForwardOverflow || cloneIndex < 0) return;
+    cancelForwardWrapReset();
+
+    const cloneOffsetLeft = slides[cloneIndex]?.offsetLeft ?? 0;
+    const settle = () => {
+      if (Math.abs(viewport.scrollLeft - cloneOffsetLeft) <= 2) {
+        viewport.scrollTo({
+          left: slides[0]?.offsetLeft ?? 0,
+          behavior: 'auto'
+        });
+        updateActiveState(0);
+        forwardWrapFrame = null;
+        return;
+      }
+
+      forwardWrapFrame = requestAnimationFrame(settle);
+    };
+
+    forwardWrapFrame = requestAnimationFrame(settle);
+  };
+
+  const goToNext = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
+    if (hasForwardOverflow && fromRenderedIndex === lastRealIndex) {
+      goToRenderedIndex(cloneIndex, behavior);
+      scheduleForwardWrapReset();
+      return;
+    }
+
+    goToRenderedIndex(Math.min(lastRealIndex, fromRenderedIndex + 1), behavior);
+  };
+
+  const goToPrevious = (behavior = 'smooth', fromRenderedIndex = currentRenderedIndex) => {
+    cancelForwardWrapReset();
+
+    if (fromRenderedIndex <= 0) {
+      goToRealIndex(lastRealIndex, behavior);
+      return;
+    }
+
+    goToRenderedIndex(fromRenderedIndex - 1, behavior);
   };
 
   const stopAutoplay = () => {
@@ -366,21 +455,24 @@ function initHeroAffiliates(options = {}) {
 
   const startAutoplay = () => {
     stopAutoplay();
-    if (prefersReducedMotion || slides.length < 2) return;
+    if (prefersReducedMotion || HERO_AFFILIATE_SLIDES.length < 2) return;
 
     heroAffiliateInterval = window.setInterval(() => {
-      goTo(currentIndex + 1);
+      goToNext();
     }, HERO_AFFILIATE_AUTOPLAY_MS);
   };
 
   viewport.addEventListener('scroll', () => {
     if (scrollSyncFrame) cancelAnimationFrame(scrollSyncFrame);
     scrollSyncFrame = requestAnimationFrame(() => {
-      updateActiveState(getNearestIndex());
+      updateActiveState(getNearestRenderedIndex());
     });
   }, { passive: true });
 
   const resetDrag = () => {
+    if (dragPointerId !== null) {
+      viewport.releasePointerCapture?.(dragPointerId);
+    }
     dragPointerId = null;
     dragDirection = null;
     dragMoved = false;
@@ -390,10 +482,12 @@ function initHeroAffiliates(options = {}) {
 
   viewport.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    cancelForwardWrapReset();
     dragPointerId = event.pointerId;
     dragStartX = event.clientX;
     dragStartY = event.clientY;
     dragStartScrollLeft = viewport.scrollLeft;
+    dragStartRenderedIndex = currentRenderedIndex;
     dragDirection = null;
     dragMoved = false;
     viewport.classList.add('is-pointer-down');
@@ -432,11 +526,11 @@ function initHeroAffiliates(options = {}) {
       const threshold = Math.min(72, slideWidth * 0.18);
 
       if (deltaX <= -threshold) {
-        goTo(currentIndex + 1);
+        goToNext('smooth', dragStartRenderedIndex);
       } else if (deltaX >= threshold) {
-        goTo(currentIndex - 1);
+        goToPrevious('smooth', dragStartRenderedIndex);
       } else {
-        goTo(currentIndex);
+        goToRenderedIndex(dragStartRenderedIndex);
       }
     }
 
@@ -445,6 +539,7 @@ function initHeroAffiliates(options = {}) {
   });
 
   viewport.addEventListener('pointercancel', () => {
+    cancelForwardWrapReset();
     resetDrag();
     startAutoplay();
   });
@@ -469,7 +564,7 @@ function initHeroAffiliates(options = {}) {
   });
 
   updateActiveState(0);
-  goTo(0, 'auto');
+  goToRealIndex(0, 'auto');
   startAutoplay();
 }
 
