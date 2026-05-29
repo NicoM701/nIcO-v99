@@ -1137,7 +1137,7 @@ function renderKeyboard(container, config) {
     if (keyId === 'ctrl' && resolved.startsWith('+sprint; bind ')) {
       return {
         title: 'Walk',
-        detail: 'Also toggles buy/drop modifier'
+        detail: 'In buyzone: buy/drop modifier'
       };
     }
     return { title: actionText, detail: '' };
