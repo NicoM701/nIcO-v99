@@ -1068,7 +1068,7 @@ function renderKeyboard(container, config) {
 
   function getCategory(action) {
     if (!action) return 'utility';
-    if (['Move Forward', 'Move Backward', 'Move Left', 'Move Right', 'Jump', 'Duck', 'Walk', 'Noclip'].includes(action)) return 'move';
+    if (['Move Forward', 'Move Backward', 'Move Left', 'Move Right', 'Jump', 'Duck', 'Walk', 'Walk • Buy Modifier', 'Noclip'].includes(action)) return 'move';
     if (['Primary', 'Secondary', 'Knife', 'Grenades', 'Bomb / Defuse', 'Slot 6', 'Slot 7', 'Slot 8', 'Slot 9', 'Slot 10',
       'Drop Weapon', 'Reload', 'Prev Weapon', 'Next Weapon', 'Fire', 'Scope / Aim', 'Use', 'Last Weapon / Switch Hands'].includes(action)) return 'combat';
     if (action.startsWith('Chat:') || action.startsWith('Radio') || action.startsWith('Say')) return 'comm';
@@ -1108,8 +1108,8 @@ function renderKeyboard(container, config) {
 
     const resolved = resolveAliasAction(action);
     if (resolved !== action) {
-      if (resolved.startsWith('+sprint; bind ')) return 'Donate Buy Layer';
-      if (resolved.startsWith('-sprint; bind ')) return 'Normal Buy Layer';
+      if (resolved.startsWith('+sprint; bind ')) return 'Walk • Buy Modifier';
+      if (resolved.startsWith('-sprint; bind ')) return 'Walk';
       return getActionName(resolved);
     }
 
