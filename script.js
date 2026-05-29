@@ -673,7 +673,7 @@ async function initSettings() {
   }
 
   if (kbWrap && v && v.__binds) {
-    renderKeyboard(kbWrap, v.__binds);
+    renderKeyboard(kbWrap, v);
   }
 
   // Scroll Indicator Logic
@@ -799,13 +799,18 @@ async function loadAndParseConfig() {
 }
 
 function parseConfigVars(raw) {
-  const vars = { __binds: [] };
+  const vars = { __binds: [], __aliases: {} };
   for (const line of raw.split('\n')) {
     const t = line.trim();
     if (!t || t.startsWith('//')) continue;
     const bindMatch = t.match(/^bind\s+"([^"]+)"\s+"([^"]+)"$/i);
     if (bindMatch) {
       vars.__binds.push({ key: bindMatch[1], action: bindMatch[2] });
+      continue;
+    }
+    const aliasMatch = t.match(/^alias\s+([^\s]+)\s+"([^"]+)"$/i);
+    if (aliasMatch) {
+      vars.__aliases[aliasMatch[1].toLowerCase()] = aliasMatch[2];
       continue;
     }
     const match = t.match(/^(\S+)\s+"?([^"]*)"?\s*$/);
@@ -1003,7 +1008,9 @@ function weaponName(code) {
 // ──────────────────────────────────────────
 //  KEYBOARD VISUALIZER
 // ──────────────────────────────────────────
-function renderKeyboard(container, binds) {
+function renderKeyboard(container, config) {
+  const binds = config.__binds || [];
+  const aliases = config.__aliases || {};
   const bindMap = {};
   for (const b of binds) {
     let k = b.key.toLowerCase();
@@ -1066,7 +1073,7 @@ function renderKeyboard(container, binds) {
       'Drop Weapon', 'Reload', 'Prev Weapon', 'Next Weapon', 'Fire', 'Scope / Aim', 'Use', 'Last Weapon / Switch Hands'].includes(action)) return 'combat';
     if (action.startsWith('Chat:') || action.startsWith('Radio') || action.startsWith('Say')) return 'comm';
     if (['Push to Talk', 'All Chat', 'Team Chat', 'Radio Wheel', 'Speech Menu', 'Ping', 'Clutch Mode'].includes(action)) return 'comm';
-    if (action.startsWith('Buy:') || ['Buy Menu', 'Sell All', 'Auto Buy'].includes(action)) return 'buy';
+    if (action.startsWith('Buy:') || ['Buy Menu', 'Sell All', 'Auto Buy', 'Donate Buy Layer', 'Normal Buy Layer'].includes(action)) return 'buy';
     return 'utility';
   }
 
@@ -1089,8 +1096,23 @@ function renderKeyboard(container, binds) {
     'slot9': 'Slot 9', 'slot10': 'Slot 10',
   };
 
+  function resolveAliasAction(action, seen = new Set()) {
+    const key = action.toLowerCase();
+    if (!aliases[key] || seen.has(key)) return action;
+    seen.add(key);
+    return resolveAliasAction(aliases[key], seen);
+  }
+
   function getActionName(action) {
     if (actionNames[action]) return actionNames[action];
+
+    const resolved = resolveAliasAction(action);
+    if (resolved !== action) {
+      if (resolved.startsWith('+sprint; bind ')) return 'Donate Buy Layer';
+      if (resolved.startsWith('-sprint; bind ')) return 'Normal Buy Layer';
+      return getActionName(resolved);
+    }
+
     if (action.startsWith('buy ')) {
       const items = action.split(';').filter(Boolean).map(s => {
         const m = s.trim().match(/^buy\s+(.+)$/);
