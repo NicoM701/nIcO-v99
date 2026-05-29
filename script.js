@@ -1108,7 +1108,7 @@ function renderKeyboard(container, config) {
 
     const resolved = resolveAliasAction(action);
     if (resolved !== action) {
-      if (resolved.startsWith('+sprint; bind ')) return 'Walk • Buy Modifier';
+      if (resolved.startsWith('+sprint; bind ')) return 'Walk';
       if (resolved.startsWith('-sprint; bind ')) return 'Walk';
       return getActionName(resolved);
     }
@@ -1130,6 +1130,31 @@ function renderKeyboard(container, config) {
     if (action.startsWith('volume ')) return 'Volume ' + action.slice(7);
     if (action.startsWith('toggle ')) return 'Toggle ' + action.split(' ')[1];
     return action;
+  }
+
+  function getTooltipContent(keyId, actionText, rawAction) {
+    const resolved = resolveAliasAction(rawAction);
+    if (keyId === 'ctrl' && resolved.startsWith('+sprint; bind ')) {
+      return {
+        title: 'Walk',
+        detail: 'Also toggles buy/drop modifier'
+      };
+    }
+    return { title: actionText, detail: '' };
+  }
+
+  function showTooltip(target, content) {
+    tooltip.innerHTML = `<div class="kb-tooltip__title">${content.title}</div>${content.detail ? `<div class="kb-tooltip__detail">${content.detail}</div>` : ''}`;
+    tooltip.style.display = 'block';
+    const rect = target.getBoundingClientRect();
+    const docScrollY = window.scrollY;
+    let left = rect.left + rect.width / 2;
+    let top = rect.top + docScrollY - 8;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.position = 'absolute';
+    tooltip.style.transform = 'translate(-50%, -100%)';
+    tooltip.style.zIndex = '9999';
   }
 
   // --- RENDER ---
@@ -1171,17 +1196,7 @@ function renderKeyboard(container, config) {
       keyEl.classList.add('kb-key--bound', `kb-key--${cat}`);
 
       keyEl.addEventListener('mouseenter', () => {
-        tooltip.textContent = actionText;
-        tooltip.style.display = 'block';
-        const rect = keyEl.getBoundingClientRect();
-        const docScrollY = window.scrollY;
-        let left = rect.left + rect.width / 2;
-        let top = rect.top + docScrollY - 8;
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-        tooltip.style.position = 'absolute';
-        tooltip.style.transform = 'translate(-50%, -100%)';
-        tooltip.style.zIndex = '9999';
+        showTooltip(keyEl, getTooltipContent(k.id, actionText, bound));
         if (k.id === 'enter') enterKeys.forEach(el => el.classList.add('kb-key--hover'));
       });
 
@@ -1219,17 +1234,7 @@ function renderKeyboard(container, config) {
       const cat = getCategory(actionText);
       keyEl.classList.add('kb-key--bound', `kb-key--${cat}`);
       keyEl.addEventListener('mouseenter', () => {
-        tooltip.textContent = actionText;
-        tooltip.style.display = 'block';
-        const rect = keyEl.getBoundingClientRect();
-        const docScrollY = window.scrollY;
-        let left = rect.left + rect.width / 2;
-        let top = rect.top + docScrollY - 8;
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-        tooltip.style.position = 'absolute';
-        tooltip.style.transform = 'translate(-50%, -100%)';
-        tooltip.style.zIndex = '9999';
+        showTooltip(keyEl, getTooltipContent(mk.id, actionText, bound));
       });
       keyEl.addEventListener('mouseleave', () => tooltip.style.display = 'none');
     }

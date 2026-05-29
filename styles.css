@@ -1247,7 +1247,7 @@ video {
   background: rgba(10, 10, 18, 0.95);
   border: 1px solid var(--purple-500);
   color: #fff;
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
   white-space: nowrap;
@@ -1256,6 +1256,18 @@ video {
   transform: translate(-50%, -100%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   font-weight: 500;
+}
+
+.kb-tooltip__title {
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.kb-tooltip__detail {
+  margin-top: 3px;
+  font-size: 0.7rem;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .kb-tooltip::after {
