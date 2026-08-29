@@ -331,7 +331,7 @@ video {
 
 @media (max-width: 768px) {
   #viewer-stats-pill {
-    top: 56px;
+    top: 68px;
     right: 16px;
     z-index: 99;
   }
@@ -1245,6 +1245,11 @@ video {
   box-shadow: 0 0 15px currentColor;
 }
 
+.kb-key--bound:focus-visible {
+  outline: 2px solid var(--purple-300);
+  outline-offset: 2px;
+}
+
 /* Mouse Section */
 .kb-mouse-section {
   margin-top: 16px;
@@ -1567,8 +1572,14 @@ video {
     padding: 0;
   }
 
+  .nav-left {
+    min-height: 44px;
+  }
+
   .nav-toggle {
     display: flex;
+    width: 44px;
+    height: 44px;
   }
 
   .nav-links {
@@ -1610,6 +1621,20 @@ video {
 
   .nav-inner.nav-open .nav-toggle-line:nth-child(3) {
     transform: translateY(-7px) rotate(-45deg);
+  }
+}
+
+@media (max-width: 300px) {
+  .tilt-container {
+    width: 100%;
+  }
+
+  .faq-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .faq-card {
+    padding: 18px 16px;
   }
 }
 

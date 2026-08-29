@@ -37,6 +37,7 @@ let csElapsedInterval = null;
 let activeNavigationController = null;
 const routeCache = new Map();
 let heroAffiliateInterval = null;
+let keyboardTooltipController = null;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp, { once: true });
@@ -280,6 +281,12 @@ function handleRoute() {
   const path = window.location.pathname;
 
   initAge(); // Runs if #userAge exists
+  updateCopyrightYear();
+
+  if (keyboardTooltipController) {
+    keyboardTooltipController.abort();
+    keyboardTooltipController = null;
+  }
 
   if (csElapsedInterval) {
     clearInterval(csElapsedInterval);
@@ -298,6 +305,15 @@ function handleRoute() {
   } else if (path.includes('faq')) {
     initFaq();
   }
+}
+
+function updateCopyrightYear() {
+  const startYear = 2025;
+  const currentYear = new Date().getFullYear();
+  const label = currentYear > startYear ? `${startYear}–${currentYear}` : String(startYear);
+  document.querySelectorAll('[data-copyright-year]').forEach(el => {
+    el.textContent = label;
+  });
 }
 
 
@@ -1185,7 +1201,9 @@ function renderKeyboard(container, config) {
     tooltip.style.display = 'block';
     const rect = target.getBoundingClientRect();
     const docScrollY = window.scrollY;
-    let left = rect.left + rect.width / 2;
+    const tooltipHalfWidth = tooltip.getBoundingClientRect().width / 2;
+    const unclampedLeft = rect.left + rect.width / 2;
+    let left = Math.max(tooltipHalfWidth + 8, Math.min(window.innerWidth - tooltipHalfWidth - 8, unclampedLeft));
     let top = rect.top + docScrollY - 8;
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
@@ -1210,8 +1228,69 @@ function renderKeyboard(container, config) {
   } else {
     tooltip.style.display = 'none';
   }
+  tooltip.id = 'keyboard-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
 
   const enterKeys = [];
+  let pinnedTooltipTarget = null;
+
+  keyboardTooltipController = new AbortController();
+  document.addEventListener('pointerdown', (event) => {
+    if (!event.target.closest('.kb-key--bound')) {
+      pinnedTooltipTarget = null;
+      tooltip.style.display = 'none';
+      enterKeys.forEach(el => el.classList.remove('kb-key--hover'));
+    }
+  }, { signal: keyboardTooltipController.signal });
+
+  function attachTooltip(keyEl, keyId, content) {
+    const setEnterHighlight = (active) => {
+      if (keyId === 'enter') {
+        enterKeys.forEach(el => el.classList.toggle('kb-key--hover', active));
+      }
+    };
+    const open = (pin = false) => {
+      if (pin) {
+        if (pinnedTooltipTarget !== keyEl) {
+          enterKeys.forEach(el => el.classList.remove('kb-key--hover'));
+        }
+        pinnedTooltipTarget = keyEl;
+      }
+      showTooltip(keyEl, content);
+      setEnterHighlight(true);
+    };
+    const close = () => {
+      if (pinnedTooltipTarget === keyEl) pinnedTooltipTarget = null;
+      tooltip.style.display = 'none';
+      setEnterHighlight(false);
+    };
+    const togglePinned = () => {
+      if (pinnedTooltipTarget === keyEl) close();
+      else open(true);
+    };
+
+    keyEl.tabIndex = 0;
+    keyEl.setAttribute('role', 'button');
+    keyEl.setAttribute('aria-describedby', tooltip.id);
+    keyEl.setAttribute('aria-label', `${keyEl.textContent}: ${content.title}`);
+    keyEl.addEventListener('mouseenter', () => open());
+    keyEl.addEventListener('mouseleave', () => {
+      if (pinnedTooltipTarget !== keyEl) close();
+    });
+    keyEl.addEventListener('pointerup', (event) => {
+      if (event.pointerType !== 'mouse') togglePinned();
+    });
+    keyEl.addEventListener('focus', () => open());
+    keyEl.addEventListener('blur', () => {
+      if (pinnedTooltipTarget !== keyEl) close();
+    });
+    keyEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        togglePinned();
+      }
+    });
+  }
 
   keys.forEach(k => {
     const keyEl = document.createElement('div');
@@ -1231,16 +1310,7 @@ function renderKeyboard(container, config) {
       const actionText = getActionName(bound);
       const cat = getCategory(actionText);
       keyEl.classList.add('kb-key--bound', `kb-key--${cat}`);
-
-      keyEl.addEventListener('mouseenter', () => {
-        showTooltip(keyEl, getTooltipContent(k.id, actionText, bound));
-        if (k.id === 'enter') enterKeys.forEach(el => el.classList.add('kb-key--hover'));
-      });
-
-      keyEl.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-        if (k.id === 'enter') enterKeys.forEach(el => el.classList.remove('kb-key--hover'));
-      });
+      attachTooltip(keyEl, k.id, getTooltipContent(k.id, actionText, bound));
     }
     keyboard.appendChild(keyEl);
   });
@@ -1270,10 +1340,7 @@ function renderKeyboard(container, config) {
       const actionText = getActionName(bound);
       const cat = getCategory(actionText);
       keyEl.classList.add('kb-key--bound', `kb-key--${cat}`);
-      keyEl.addEventListener('mouseenter', () => {
-        showTooltip(keyEl, getTooltipContent(mk.id, actionText, bound));
-      });
-      keyEl.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+      attachTooltip(keyEl, mk.id, getTooltipContent(mk.id, actionText, bound));
     }
     mouseGrid.appendChild(keyEl);
   });
