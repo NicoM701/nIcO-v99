@@ -82,6 +82,43 @@ function attachGlobalListeners() {
 
   // Scroll listener for scroll indicator (delegated or global)
   window.addEventListener('scroll', handleScrollIndicator);
+
+  document.addEventListener('click', handleNavigationMenuClick);
+  document.addEventListener('keydown', handleNavigationMenuKeydown);
+  window.addEventListener('resize', closeNavigationMenu);
+}
+
+function setNavigationMenuOpen(isOpen) {
+  const navInner = document.querySelector('.nav-inner');
+  const toggle = document.querySelector('.nav-toggle');
+  if (!navInner || !toggle) return;
+
+  navInner.classList.toggle('nav-open', isOpen);
+  toggle.setAttribute('aria-expanded', String(isOpen));
+  toggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+}
+
+function closeNavigationMenu() {
+  setNavigationMenuOpen(false);
+}
+
+function handleNavigationMenuClick(event) {
+  const toggle = event.target.closest('.nav-toggle');
+  if (toggle) {
+    setNavigationMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    return;
+  }
+
+  if (event.target.closest('.nav-link') || !event.target.closest('.nav-inner')) {
+    closeNavigationMenu();
+  }
+}
+
+function handleNavigationMenuKeydown(event) {
+  if (event.key === 'Escape') {
+    closeNavigationMenu();
+    document.querySelector('.nav-toggle')?.focus();
+  }
 }
 
 
