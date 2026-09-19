@@ -1,5 +1,5 @@
 /**
- * GET  /api/visitors — return total unique visitors + live count
+ * GET  /api/visitors — return total unique visitor-days + live count
  * POST /api/visitors — register a visit (cookieless, daily-salted IP hash)
  * DELETE /api/visitors — reset counter (requires VISITOR_RESET_SECRET header)
  *
@@ -15,29 +15,23 @@
  */
 
 import { Redis } from '@upstash/redis';
+import {
+  LIVE_SET_KEY,
+  LIVE_TTL,
+  SEEN_KEY,
+  SEEN_TTL_SECONDS,
+  TOTAL_KEY,
+  parseScanResult,
+  seenKeyForDay,
+  seenKeyMatchPattern,
+  shouldIncrementTotal,
+  utcDay,
+} from '../js/visitor-logic.js';
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
-
-const TOTAL_KEY = 'nv99:total_visitors';
-const SEEN_KEY = 'nv99:seen_visitors';
-const LIVE_SET_KEY = 'nv99:live_visitors';
-const LIVE_TTL = 30;
-const SEEN_TTL_SECONDS = 60 * 60 * 48;
-
-function utcDay(date = new Date()) {
-  return date.toISOString().slice(0, 10);
-}
-
-function seenKeyForDay(day = utcDay()) {
-  return `${SEEN_KEY}:${day}`;
-}
-
-function previousUtcDay(date = new Date()) {
-  return utcDay(new Date(date.getTime() - 24 * 60 * 60 * 1000));
-}
 
 /**
  * Create a privacy-safe fingerprint from IP + daily salt.
@@ -51,7 +45,6 @@ async function getFingerprint(req, today = utcDay()) {
 
   const raw = `${ip}:${today}:nv99salt`;
 
-  // Use Web Crypto (available in Vercel Edge & Node 18+)
   const encoder = new TextEncoder();
   const data = encoder.encode(raw);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -68,18 +61,17 @@ export default async function handler(req, res) {
       const fp = await getFingerprint(req, today);
       const dayKey = seenKeyForDay(today);
 
-      // Unique per UTC day. Daily keys expire so hashes are not stored forever.
       const added = await redis.sadd(dayKey, fp);
-      await redis.expire(dayKey, SEEN_TTL_SECONDS);
 
-      if (added === 1) {
-        const wasLegacy = await redis.sismember(SEEN_KEY, fp);
-        if (wasLegacy !== 1 && wasLegacy !== true) {
-          await redis.incr(TOTAL_KEY);
-        }
+      if (shouldIncrementTotal(added, await redis.sismember(SEEN_KEY, fp).catch(() => 0))) {
+        await redis.incr(TOTAL_KEY);
       }
 
-      await touchLiveVisitor(fp);
+      await Promise.all([
+        redis.expire(dayKey, SEEN_TTL_SECONDS),
+        expireLegacySeenSetOnce(),
+        touchLiveVisitor(fp),
+      ]);
 
       const [total, live] = await Promise.all([
         redis.get(TOTAL_KEY),
@@ -90,7 +82,6 @@ export default async function handler(req, res) {
     }
 
     if (method === 'GET') {
-      // Also refresh live presence on GET so polling updates don't expire
       const fp = await getFingerprint(req);
       await touchLiveVisitor(fp);
 
@@ -108,9 +99,7 @@ export default async function handler(req, res) {
       }
       await Promise.all([
         redis.set(TOTAL_KEY, 0),
-        redis.del(SEEN_KEY),
-        redis.del(seenKeyForDay()),
-        redis.del(seenKeyForDay(previousUtcDay())),
+        deleteMatchingKeys(seenKeyMatchPattern()),
         redis.del(LIVE_SET_KEY),
       ]);
       return res.json({ reset: true, total: 0, live: 0 });
@@ -122,6 +111,24 @@ export default async function handler(req, res) {
     console.error('Visitor API error:', err);
     return res.json({ total: '—', live: 0 });
   }
+}
+
+async function expireLegacySeenSetOnce() {
+  const ttl = await redis.ttl(SEEN_KEY);
+  if (ttl === -1) {
+    await redis.expire(SEEN_KEY, SEEN_TTL_SECONDS);
+  }
+}
+
+async function deleteMatchingKeys(match) {
+  let cursor = '0';
+  do {
+    const scanned = parseScanResult(await redis.scan(cursor, { match, count: 100 }));
+    cursor = scanned.cursor;
+    if (scanned.keys.length) {
+      await redis.del(...scanned.keys);
+    }
+  } while (cursor !== '0');
 }
 
 async function touchLiveVisitor(fingerprint) {

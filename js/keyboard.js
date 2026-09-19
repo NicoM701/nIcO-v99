@@ -100,7 +100,17 @@ export function renderKeyboard(container, config) {
   }, { signal: keyboardTooltipController.signal });
 
   function showTooltip(target, content) {
-    tooltip.innerHTML = `<div class="kb-tooltip__title">${content.title}</div>${content.detail ? `<div class="kb-tooltip__detail">${content.detail}</div>` : ''}`;
+    tooltip.replaceChildren();
+    const title = document.createElement('div');
+    title.className = 'kb-tooltip__title';
+    title.textContent = content.title || '';
+    tooltip.appendChild(title);
+    if (content.detail) {
+      const detail = document.createElement('div');
+      detail.className = 'kb-tooltip__detail';
+      detail.textContent = content.detail;
+      tooltip.appendChild(detail);
+    }
     tooltip.style.display = 'block';
     const rect = target.getBoundingClientRect();
     const tooltipHalfWidth = tooltip.getBoundingClientRect().width / 2;

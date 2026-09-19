@@ -1,5 +1,6 @@
 export const DPI = 1200;
 export const CROSSHAIR_CODE = 'CSGO-JQZpU-3m3wr-rv889-nUCtF-WHFFN';
+export const CONFIG_URL = '/config.cfg';
 
 const WEAPON_NAMES = {
   ak47: 'AK-47',
@@ -313,7 +314,7 @@ export function buildSettings(v) {
 
 export async function loadAndParseConfig() {
   try {
-    const res = await fetch('/config.cfg');
+    const res = await fetch(CONFIG_URL);
     if (!res.ok) throw new Error('Failed to load');
     return parseConfigVars(await res.text());
   } catch {

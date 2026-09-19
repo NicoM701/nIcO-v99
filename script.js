@@ -10,12 +10,14 @@ import {
   getOrLoadConfig,
 } from './js/config.js';
 import { renderKeyboard, stopKeyboardTooltips } from './js/keyboard.js';
+import { shouldSkipStaleRender } from './js/lifecycle.js';
 
 const CS_START_DATE_UTC = Date.UTC(2014, 11, 22, 15, 44, 9);
 const ROUTE_CACHE_TTL_MS = 30000;
 
 let csElapsedInterval = null;
 let activeNavigationController = null;
+let routeGeneration = 0;
 const routeCache = new Map();
 
 if (document.readyState === 'loading') {
@@ -227,6 +229,7 @@ function warmRouteCache() {
 
 function handleRoute() {
   const path = window.location.pathname;
+  const generation = ++routeGeneration;
 
   initAge();
   updateCopyrightYear();
@@ -239,11 +242,11 @@ function handleRoute() {
   }
 
   if (path === '/' || path.endsWith('index.html')) {
-    initHome();
+    initHome(generation);
   } else if (path.includes('settings')) {
-    initSettings();
+    initSettings(generation);
   } else if (path.includes('faq')) {
-    initFaq();
+    initFaq(generation);
   }
 }
 
@@ -256,18 +259,25 @@ function updateCopyrightYear() {
   });
 }
 
-async function initHome() {
+async function initHome(generation) {
   initHeroAffiliates();
 
   const el = document.getElementById('settingsOverview');
-  if (el) {
-    const v = await getOrLoadConfig();
-    if (v) renderHomeOverview(el, v);
-    else el.innerHTML = '<p class="settings-error">Could not load settings.</p>';
+  if (!el) return;
+
+  const v = await getOrLoadConfig();
+  if (shouldSkipStaleRender(generation, routeGeneration, [el])) return;
+
+  if (v) renderHomeOverview(el, v);
+  else {
+    const error = document.createElement('p');
+    error.className = 'settings-error';
+    error.textContent = 'Could not load settings.';
+    el.replaceChildren(error);
   }
 }
 
-async function initSettings() {
+async function initSettings(generation) {
   const grid = document.getElementById('settingsGrid');
   const kbWrap = document.getElementById('keyboardWrap');
   const existingAffiliateSlot = document.getElementById('settingsAffiliateSlot');
@@ -285,12 +295,16 @@ async function initSettings() {
   }
 
   const v = await getOrLoadConfig();
+  if (shouldSkipStaleRender(generation, routeGeneration, [grid, kbWrap])) return;
 
   if (grid) {
     if (!v) {
-      grid.innerHTML = '<p class="settings-error settings-error--grid">Could not load config.cfg</p>';
+      const error = document.createElement('p');
+      error.className = 'settings-error settings-error--grid';
+      error.textContent = 'Could not load config.cfg';
+      grid.replaceChildren(error);
     } else {
-      renderSettings(grid, buildSettings(v), v);
+      renderSettings(grid, buildSettings(v));
 
       const affiliateSlot = document.createElement('section');
       affiliateSlot.className = 'hero-affiliates hero-affiliates--settings hero-affiliates--settings-flat';
@@ -314,7 +328,7 @@ async function initSettings() {
   }
 
   const indicator = document.getElementById('scrollIndicator');
-  if (indicator) {
+  if (indicator?.isConnected) {
     indicator.classList.remove('hidden');
     handleScrollIndicator();
   }
@@ -349,11 +363,18 @@ function handleScrollIndicator() {
   }
 }
 
-function initFaq() {
+function initFaq(generation) {
   const elapsedEl = document.getElementById('csStartElapsed');
   if (!elapsedEl) return;
 
   const renderElapsed = () => {
+    if (generation !== routeGeneration || !elapsedEl.isConnected) {
+      if (csElapsedInterval) {
+        clearInterval(csElapsedInterval);
+        csElapsedInterval = null;
+      }
+      return;
+    }
     const now = Date.now();
     const diff = Math.max(0, now - CS_START_DATE_UTC);
     elapsedEl.textContent = formatElapsed(diff);
@@ -468,11 +489,14 @@ function renderSettings(grid, settings) {
       const valueEl = document.createElement('span');
       valueEl.className = 'setting-value';
 
-      if (label === 'Color' && value.startsWith('rgb')) {
-        valueEl.innerHTML = `<span class="color-swatch-wrap">
-          <span class="color-swatch" style="background:${value}"></span>
-          ${value}
-        </span>`;
+      if (label === 'Color' && /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/.test(value)) {
+        const wrap = document.createElement('span');
+        wrap.className = 'color-swatch-wrap';
+        const swatch = document.createElement('span');
+        swatch.className = 'color-swatch';
+        swatch.style.backgroundColor = value;
+        wrap.append(swatch, document.createTextNode(value));
+        valueEl.replaceChildren(wrap);
       } else {
         valueEl.textContent = value;
       }
@@ -490,8 +514,11 @@ function renderSettings(grid, settings) {
       labelEl.textContent = 'Share Code';
       const btn = document.createElement('button');
       btn.className = 'copy-btn';
-      btn.innerHTML = `<svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        <span>${items.__sharecode}</span>`;
+      btn.replaceChildren();
+      btn.insertAdjacentHTML('afterbegin', '<svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>');
+      const code = document.createElement('span');
+      code.textContent = items.__sharecode;
+      btn.appendChild(code);
       btn.title = 'Click to copy';
       btn.addEventListener('click', () => {
         navigator.clipboard.writeText(items.__sharecode).then(() => {

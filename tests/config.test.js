@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  CONFIG_URL,
   buildBindMap,
   buildSettings,
   getActionName,
@@ -121,6 +122,12 @@ describe('buildSettings', () => {
     const settings = buildSettings({ sensitivity: '1.1', zoom_sensitivity_ratio: '0.818933' });
     assert.equal(settings['Mouse & Sensitivity'].eDPI, '1320');
     assert.equal(settings['Mouse & Sensitivity']['Zoom Sensitivity'], '0.8189');
+  });
+});
+
+describe('config fetch URL', () => {
+  it('loads the config from a root-absolute path', () => {
+    assert.equal(CONFIG_URL, '/config.cfg');
   });
 });
 

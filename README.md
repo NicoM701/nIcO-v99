@@ -28,9 +28,13 @@ The website is powered by the `config.cfg` file.
 ├── js/
 │   ├── affiliates.js     # Partner carousel
 │   ├── config.js         # CS2 config parser + bind mapping
-│   └── keyboard.js       # Visual keyboard
+│   ├── keyboard.js       # Visual keyboard
+│   ├── lifecycle.js      # SPA stale-render guards
+│   └── visitor-logic.js  # Visitor-day counting helpers
 ├── tests/
-│   └── config.test.js    # Parser, DE layout, and alias tests
+│   ├── config.test.js
+│   ├── lifecycle.test.js
+│   └── visitor-logic.test.js
 ├── icons/                 # Social & UI SVGs
 ├── assets/                # Images & Backgrounds
 ├── index.html             # Profile & Hardware (Home)
