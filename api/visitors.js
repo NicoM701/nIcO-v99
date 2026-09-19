@@ -5,6 +5,7 @@
  *
  * Privacy-friendly: no cookies, no persistent IP storage.
  * Uses a daily-rotating salt so IP hashes can't be correlated across days.
+ * Seen fingerprints live in `nv99:seen_visitors:YYYY-MM-DD` keys with a 48h TTL.
  *
  * Env vars:
  *   UPSTASH_REDIS_REST_URL
@@ -20,21 +21,33 @@ const redis = new Redis({
 });
 
 const TOTAL_KEY = 'nv99:total_visitors';
-const SEEN_KEY = 'nv99:seen_visitors';   // Redis SET of hashed fingerprints
+const SEEN_KEY = 'nv99:seen_visitors';
 const LIVE_SET_KEY = 'nv99:live_visitors';
 const LIVE_TTL = 30;
+const SEEN_TTL_SECONDS = 60 * 60 * 48;
+
+function utcDay(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function seenKeyForDay(day = utcDay()) {
+  return `${SEEN_KEY}:${day}`;
+}
+
+function previousUtcDay(date = new Date()) {
+  return utcDay(new Date(date.getTime() - 24 * 60 * 60 * 1000));
+}
 
 /**
  * Create a privacy-safe fingerprint from IP + daily salt.
  * The salt rotates daily so hashes can't be correlated long-term.
  */
-async function getFingerprint(req) {
+async function getFingerprint(req, today = utcDay()) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
     || req.headers['x-real-ip']
     || req.socket?.remoteAddress
     || 'unknown';
 
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const raw = `${ip}:${today}:nv99salt`;
 
   // Use Web Crypto (available in Vercel Edge & Node 18+)
@@ -50,14 +63,19 @@ export default async function handler(req, res) {
     const method = req.method;
 
     if (method === 'POST') {
-      const fp = await getFingerprint(req);
+      const today = utcDay();
+      const fp = await getFingerprint(req, today);
+      const dayKey = seenKeyForDay(today);
 
-      // Check if this fingerprint was already seen
-      const added = await redis.sadd(SEEN_KEY, fp);
+      // Unique per UTC day. Daily keys expire so hashes are not stored forever.
+      const added = await redis.sadd(dayKey, fp);
+      await redis.expire(dayKey, SEEN_TTL_SECONDS);
 
       if (added === 1) {
-        // New unique visitor
-        await redis.incr(TOTAL_KEY);
+        const wasLegacy = await redis.sismember(SEEN_KEY, fp);
+        if (wasLegacy !== 1 && wasLegacy !== true) {
+          await redis.incr(TOTAL_KEY);
+        }
       }
 
       await touchLiveVisitor(fp);
@@ -90,6 +108,8 @@ export default async function handler(req, res) {
       await Promise.all([
         redis.set(TOTAL_KEY, 0),
         redis.del(SEEN_KEY),
+        redis.del(seenKeyForDay()),
+        redis.del(seenKeyForDay(previousUtcDay())),
         redis.del(LIVE_SET_KEY),
       ]);
       return res.json({ reset: true, total: 0, live: 0 });

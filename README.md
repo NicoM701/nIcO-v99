@@ -8,6 +8,7 @@ Personal gaming hub & config viewer for **nIcO v99**.
   - *Smart Mapping*: Automatically maps US-config binds to the correct German layout keys.
 - **Hardware Specs** — Detailed PC components and peripherals list.
 - **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, Discord, and GitHub.
+- **FAQ** — Origin story, CS playtime, and contact notes.
 - **Live Visitor Stats** — Real-time viewer count and total visits via Upstash Redis with polling updates.
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
@@ -24,16 +25,29 @@ The website is powered by the `config.cfg` file.
 ```
 ├── api/
 │   └── visitors.js       # Vercel Serverless: visitor stats (Upstash Redis)
+├── js/
+│   ├── affiliates.js     # Partner carousel
+│   ├── config.js         # CS2 config parser + bind mapping
+│   └── keyboard.js       # Visual keyboard
+├── tests/
+│   └── config.test.js    # Parser, DE layout, and alias tests
 ├── icons/                 # Social & UI SVGs
 ├── assets/                # Images & Backgrounds
 ├── index.html             # Profile & Hardware (Home)
 ├── settings.html          # CS2 Config & Keyboard
-├── script.js              # SPA Routing & UI Logic
+├── faq.html               # FAQ
+├── script.js              # SPA routing & page UI
 ├── viewer-stats.js        # Visitor counter client (polls /api/visitors)
 ├── styles.css             # Visual Styles
 ├── config.cfg             # Source of Truth (CS2 config)
 ├── vercel.json            # Vercel deployment config
 └── package.json           # Dependencies (@upstash/redis)
+```
+
+## 🧪 Tests
+
+```bash
+npm test
 ```
 
 ## 🚀 Deployment
