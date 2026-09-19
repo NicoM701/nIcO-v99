@@ -34,7 +34,8 @@ The website is powered by the `config.cfg` file.
 ├── tests/
 │   ├── config.test.js
 │   ├── lifecycle.test.js
-│   └── visitor-logic.test.js
+│   ├── visitor-logic.test.js
+│   └── visitors-api.test.js # API authorization and Lua failure/retry coverage
 ├── icons/                 # Social & UI SVGs
 ├── assets/                # Images & Backgrounds
 ├── index.html             # Profile & Hardware (Home)
@@ -51,8 +52,13 @@ The website is powered by the `config.cfg` file.
 ## 🧪 Tests
 
 ```bash
+npm ci
 npm test
 ```
+
+GitHub Actions runs these tests for pull requests and pushes to `main`.
+API tests execute the production Lua script with simulated Redis commands;
+they do not connect to the live database.
 
 ## 🚀 Deployment
 
@@ -62,6 +68,7 @@ npm test
 4. Add environment variables in Vercel project settings:
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
+   - `VISITOR_RESET_SECRET` (optional; leave unset to disable counter resets)
 5. Deploy!
 
 ## 📄 License

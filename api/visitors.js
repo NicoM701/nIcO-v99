@@ -24,14 +24,35 @@ import {
   parseScanResult,
   seenKeyForDay,
   seenKeyMatchPattern,
-  shouldIncrementTotal,
   utcDay,
 } from '../js/visitor-logic.js';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+// Redis executes this without interleaving requests. Read membership before any
+// writes, and increment before recording a new fingerprint so a failed INCR
+// cannot consume the visit. SADD and EXPIRE cannot be split by a network failure.
+export const REGISTER_VISIT_SCRIPT = `
+local seen = redis.call('SISMEMBER', KEYS[1], ARGV[1])
+local legacy = redis.call('SISMEMBER', KEYS[2], ARGV[1])
+local legacyTtl = redis.call('TTL', KEYS[2])
+if legacyTtl == -1 then
+  redis.call('EXPIRE', KEYS[2], ARGV[2])
+end
+if seen == 0 and legacy == 0 then
+  redis.call('INCR', KEYS[3])
+end
+redis.call('SADD', KEYS[1], ARGV[1])
+redis.call('EXPIRE', KEYS[1], ARGV[2])
+return 1
+`;
+
+let defaultHandler;
+export default async function handler(req, res) {
+  defaultHandler ??= createVisitorHandler(new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  }));
+  return defaultHandler(req, res);
+}
 
 /**
  * Create a privacy-safe fingerprint from IP + daily salt.
@@ -52,99 +73,90 @@ async function getFingerprint(req, today = utcDay()) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export default async function handler(req, res) {
-  try {
-    const method = req.method;
+export function createVisitorHandler(redis, getResetSecret = () => process.env.VISITOR_RESET_SECRET) {
+  return async function handleVisitorRequest(req, res) {
+    try {
+      const method = req.method;
 
-    if (method === 'POST') {
-      const today = utcDay();
-      const fp = await getFingerprint(req, today);
-      const dayKey = seenKeyForDay(today);
+      if (method === 'POST') {
+        const today = utcDay();
+        const fp = await getFingerprint(req, today);
+        const dayKey = seenKeyForDay(today);
 
-      const added = await redis.sadd(dayKey, fp);
+        await redis.eval(
+          REGISTER_VISIT_SCRIPT,
+          [dayKey, SEEN_KEY, TOTAL_KEY],
+          [fp, SEEN_TTL_SECONDS],
+        );
+        await touchLiveVisitor(fp);
 
-      if (shouldIncrementTotal(added, await redis.sismember(SEEN_KEY, fp).catch(() => 0))) {
-        await redis.incr(TOTAL_KEY);
+        const [total, live] = await Promise.all([
+          redis.get(TOTAL_KEY),
+          countLive(),
+        ]);
+
+        return res.json({ total: Number(total || 0), live });
       }
 
-      await Promise.all([
-        redis.expire(dayKey, SEEN_TTL_SECONDS),
-        expireLegacySeenSetOnce(),
-        touchLiveVisitor(fp),
-      ]);
+      if (method === 'GET') {
+        const fp = await getFingerprint(req);
+        await touchLiveVisitor(fp);
 
-      const [total, live] = await Promise.all([
-        redis.get(TOTAL_KEY),
-        countLive(),
-      ]);
-
-      return res.json({ total: Number(total || 0), live });
-    }
-
-    if (method === 'GET') {
-      const fp = await getFingerprint(req);
-      await touchLiveVisitor(fp);
-
-      const [total, live] = await Promise.all([
-        redis.get(TOTAL_KEY),
-        countLive(),
-      ]);
-      return res.json({ total: Number(total || 0), live });
-    }
-
-    if (method === 'DELETE') {
-      const secret = req.headers['x-reset-secret'];
-      if (secret !== process.env.VISITOR_RESET_SECRET) {
-        return res.status(403).json({ error: 'Forbidden' });
+        const [total, live] = await Promise.all([
+          redis.get(TOTAL_KEY),
+          countLive(),
+        ]);
+        return res.json({ total: Number(total || 0), live });
       }
-      await Promise.all([
-        redis.set(TOTAL_KEY, 0),
-        deleteMatchingKeys(seenKeyMatchPattern()),
-        redis.del(LIVE_SET_KEY),
-      ]);
-      return res.json({ reset: true, total: 0, live: 0 });
+
+      if (method === 'DELETE') {
+        const secret = req.headers['x-reset-secret'];
+        const expectedSecret = getResetSecret();
+        if (typeof expectedSecret !== 'string' || !expectedSecret.trim() || secret !== expectedSecret) {
+          return res.status(403).json({ error: 'Forbidden' });
+        }
+        await Promise.all([
+          redis.set(TOTAL_KEY, 0),
+          deleteMatchingKeys(seenKeyMatchPattern()),
+          redis.del(LIVE_SET_KEY),
+        ]);
+        return res.json({ reset: true, total: 0, live: 0 });
+      }
+
+      res.setHeader('Allow', 'GET, POST, DELETE');
+      return res.status(405).json({ error: 'Method not allowed' });
+    } catch (err) {
+      console.error('Visitor API error:', err);
+      return res.json({ total: '—', live: 0 });
     }
+  };
 
-    res.setHeader('Allow', 'GET, POST, DELETE');
-    return res.status(405).json({ error: 'Method not allowed' });
-  } catch (err) {
-    console.error('Visitor API error:', err);
-    return res.json({ total: '—', live: 0 });
+  async function deleteMatchingKeys(match) {
+    let cursor = '0';
+    do {
+      const scanned = parseScanResult(await redis.scan(cursor, { match, count: 100 }));
+      cursor = scanned.cursor;
+      if (scanned.keys.length) {
+        await redis.del(...scanned.keys);
+      }
+    } while (cursor !== '0');
   }
-}
 
-async function expireLegacySeenSetOnce() {
-  const ttl = await redis.ttl(SEEN_KEY);
-  if (ttl === -1) {
-    await redis.expire(SEEN_KEY, SEEN_TTL_SECONDS);
-  }
-}
-
-async function deleteMatchingKeys(match) {
-  let cursor = '0';
-  do {
-    const scanned = parseScanResult(await redis.scan(cursor, { match, count: 100 }));
-    cursor = scanned.cursor;
-    if (scanned.keys.length) {
-      await redis.del(...scanned.keys);
-    }
-  } while (cursor !== '0');
-}
-
-async function touchLiveVisitor(fingerprint) {
-  const now = Date.now();
-  await redis.zadd(LIVE_SET_KEY, { score: now, member: fingerprint });
-}
-
-async function countLive() {
-  try {
+  async function touchLiveVisitor(fingerprint) {
     const now = Date.now();
-    const cutoff = now - (LIVE_TTL * 1000);
+    await redis.zadd(LIVE_SET_KEY, { score: now, member: fingerprint });
+  }
 
-    await redis.zremrangebyscore(LIVE_SET_KEY, 0, cutoff);
-    const count = await redis.zcount(LIVE_SET_KEY, cutoff, now);
-    return Number(count || 0);
-  } catch {
-    return 0;
+  async function countLive() {
+    try {
+      const now = Date.now();
+      const cutoff = now - (LIVE_TTL * 1000);
+
+      await redis.zremrangebyscore(LIVE_SET_KEY, 0, cutoff);
+      const count = await redis.zcount(LIVE_SET_KEY, cutoff, now);
+      return Number(count || 0);
+    } catch {
+      return 0;
+    }
   }
 }

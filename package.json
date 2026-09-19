@@ -10,5 +10,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.34.3"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.5"
   }
 }
