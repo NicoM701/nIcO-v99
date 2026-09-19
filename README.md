@@ -9,7 +9,7 @@ Personal gaming hub & config viewer for **nIcO v99**.
 - **Hardware Specs** — Detailed PC components and peripherals list.
 - **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, Discord, and GitHub.
 - **FAQ** — Origin story, CS playtime, and contact notes.
-- **Live Visitor Stats** — Real-time viewer count and total visits via Upstash Redis with polling updates.
+- **Live Visitor Stats** — Unique visitor-days and live viewers via Upstash Redis with polling updates.
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
 ## 🛠️ Configuration

@@ -313,7 +313,7 @@ export function buildSettings(v) {
 
 export async function loadAndParseConfig() {
   try {
-    const res = await fetch('config.cfg');
+    const res = await fetch('/config.cfg');
     if (!res.ok) throw new Error('Failed to load');
     return parseConfigVars(await res.text());
   } catch {

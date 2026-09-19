@@ -5,6 +5,7 @@
  *
  * Privacy-friendly: no cookies, no persistent IP storage.
  * Uses a daily-rotating salt so IP hashes can't be correlated across days.
+ * `total` counts unique visitor-days (same IP on a new UTC day increments again).
  * Seen fingerprints live in `nv99:seen_visitors:YYYY-MM-DD` keys with a 48h TTL.
  *
  * Env vars:

@@ -22,11 +22,25 @@ const HERO_AFFILIATE_SLIDES = [
 ];
 
 let heroAffiliateInterval = null;
+let heroAffiliateController = null;
+let heroAffiliateCleanup = null;
 
-export function stopHeroAffiliates() {
+function stopAutoplayInterval() {
   if (heroAffiliateInterval) {
     clearInterval(heroAffiliateInterval);
     heroAffiliateInterval = null;
+  }
+}
+
+export function stopHeroAffiliates() {
+  stopAutoplayInterval();
+  if (heroAffiliateCleanup) {
+    heroAffiliateCleanup();
+    heroAffiliateCleanup = null;
+  }
+  if (heroAffiliateController) {
+    heroAffiliateController.abort();
+    heroAffiliateController = null;
   }
 }
 
@@ -36,6 +50,10 @@ export function initHeroAffiliates(options = {}) {
   const pagination = document.getElementById(options.paginationId || 'heroAffiliatesPagination');
 
   if (!root || !viewport || !pagination) return;
+
+  stopHeroAffiliates();
+  heroAffiliateController = new AbortController();
+  const { signal } = heroAffiliateController;
 
   const slideCount = HERO_AFFILIATE_SLIDES.length;
   const hasLoop = slideCount > 1;
@@ -120,6 +138,7 @@ export function initHeroAffiliates(options = {}) {
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        if (signal.aborted) return;
         viewport.classList.remove('is-resetting');
       });
     });
@@ -178,7 +197,7 @@ export function initHeroAffiliates(options = {}) {
   };
 
   const finishLoopReset = () => {
-    if (!isLoopResetting || pendingLoopTargetRealIndex === null) return;
+    if (signal.aborted || !isLoopResetting || pendingLoopTargetRealIndex === null) return;
 
     const targetRealIndex = pendingLoopTargetRealIndex;
     clearLoopReset();
@@ -206,7 +225,7 @@ export function initHeroAffiliates(options = {}) {
       finishLoopReset();
     };
 
-    viewport.addEventListener('scrollend', loopResetScrollEndHandler, { once: true });
+    viewport.addEventListener('scrollend', loopResetScrollEndHandler, { once: true, signal });
     loopResetTimeout = window.setTimeout(finishLoopReset, prefersReducedMotion ? 0 : 460);
   };
 
@@ -244,10 +263,12 @@ export function initHeroAffiliates(options = {}) {
   };
 
   const stopAutoplay = () => {
-    stopHeroAffiliates();
+    stopAutoplayInterval();
   };
 
   const startAutoplay = () => {
+    if (signal.aborted) return;
+
     if (isLoopResetting) {
       autoplayResumeQueued = true;
       return;
@@ -258,16 +279,34 @@ export function initHeroAffiliates(options = {}) {
     if (prefersReducedMotion || slideCount < 2) return;
 
     heroAffiliateInterval = window.setInterval(() => {
+      if (signal.aborted) {
+        stopAutoplayInterval();
+        return;
+      }
       goToNext();
     }, HERO_AFFILIATE_AUTOPLAY_MS);
+  };
+
+  heroAffiliateCleanup = () => {
+    clearLoopReset();
+    if (scrollSyncFrame) {
+      cancelAnimationFrame(scrollSyncFrame);
+      scrollSyncFrame = null;
+    }
+    if (dragPointerId !== null) {
+      viewport.releasePointerCapture?.(dragPointerId);
+      dragPointerId = null;
+    }
+    viewport.classList.remove('is-pointer-down', 'is-dragging-x', 'is-resetting');
   };
 
   viewport.addEventListener('scroll', () => {
     if (scrollSyncFrame) cancelAnimationFrame(scrollSyncFrame);
     scrollSyncFrame = requestAnimationFrame(() => {
+      if (signal.aborted) return;
       updateActiveState(getNearestRenderedIndex());
     });
-  }, { passive: true });
+  }, { passive: true, signal });
 
   const resetDrag = () => {
     if (dragPointerId !== null) {
@@ -294,7 +333,7 @@ export function initHeroAffiliates(options = {}) {
     dragMoved = false;
     viewport.classList.add('is-pointer-down');
     stopAutoplay();
-  });
+  }, { signal });
 
   viewport.addEventListener('pointermove', (event) => {
     if (dragPointerId !== event.pointerId) return;
@@ -317,7 +356,7 @@ export function initHeroAffiliates(options = {}) {
     event.preventDefault();
     dragMoved = true;
     viewport.scrollLeft = dragStartScrollLeft - deltaX;
-  });
+  }, { signal });
 
   viewport.addEventListener('pointerup', (event) => {
     if (dragPointerId !== event.pointerId) return;
@@ -339,13 +378,13 @@ export function initHeroAffiliates(options = {}) {
 
     resetDrag();
     startAutoplay();
-  });
+  }, { signal });
 
   viewport.addEventListener('pointercancel', () => {
     cancelLoopReset();
     resetDrag();
     startAutoplay();
-  });
+  }, { signal });
 
   viewport.addEventListener('click', (event) => {
     if (dragMoved) {
@@ -353,18 +392,18 @@ export function initHeroAffiliates(options = {}) {
       event.stopPropagation();
       resetDrag();
     }
-  }, true);
+  }, { capture: true, signal });
 
   viewport.addEventListener('dragstart', (event) => {
     event.preventDefault();
-  });
+  }, { signal });
 
-  root.addEventListener('mouseenter', stopAutoplay);
-  root.addEventListener('mouseleave', startAutoplay);
-  root.addEventListener('focusin', stopAutoplay);
+  root.addEventListener('mouseenter', stopAutoplay, { signal });
+  root.addEventListener('mouseleave', startAutoplay, { signal });
+  root.addEventListener('focusin', stopAutoplay, { signal });
   root.addEventListener('focusout', (event) => {
     if (!root.contains(event.relatedTarget)) startAutoplay();
-  });
+  }, { signal });
 
   updateActiveState(firstRenderedIndex);
   goToRenderedIndex(firstRenderedIndex, 'auto');

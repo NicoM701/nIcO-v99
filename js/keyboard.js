@@ -12,6 +12,12 @@ export function stopKeyboardTooltips() {
     keyboardTooltipController.abort();
     keyboardTooltipController = null;
   }
+
+  const tooltip = document.getElementById('keyboard-tooltip') || document.querySelector('.kb-tooltip');
+  if (tooltip) {
+    tooltip.style.display = 'none';
+    tooltip.replaceChildren();
+  }
 }
 
 export function renderKeyboard(container, config) {
