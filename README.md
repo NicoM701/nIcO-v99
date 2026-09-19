@@ -8,7 +8,8 @@ Personal gaming hub & config viewer for **nIcO v99**.
   - *Smart Mapping*: Automatically maps US-config binds to the correct German layout keys.
 - **Hardware Specs** — Detailed PC components and peripherals list.
 - **Social Hub** — Quick links to Steam, FACEIT, Twitch, YouTube, TikTok, X, Discord, and GitHub.
-- **Live Visitor Stats** — Real-time viewer count and total visits via Upstash Redis with polling updates.
+- **FAQ** — Origin story, CS playtime, and contact notes.
+- **Live Visitor Stats** — Unique visitor-days and live viewers via Upstash Redis with polling updates.
 - **Immersive UI** — 3D tilt effects, animated background, and glassmorphism design.
 
 ## 🛠️ Configuration
@@ -24,17 +25,40 @@ The website is powered by the `config.cfg` file.
 ```
 ├── api/
 │   └── visitors.js       # Vercel Serverless: visitor stats (Upstash Redis)
+├── js/
+│   ├── affiliates.js     # Partner carousel
+│   ├── config.js         # CS2 config parser + bind mapping
+│   ├── keyboard.js       # Visual keyboard
+│   ├── lifecycle.js      # SPA stale-render guards
+│   └── visitor-logic.js  # Visitor-day counting helpers
+├── tests/
+│   ├── config.test.js
+│   ├── lifecycle.test.js
+│   ├── visitor-logic.test.js
+│   └── visitors-api.test.js # API authorization and Lua failure/retry coverage
 ├── icons/                 # Social & UI SVGs
 ├── assets/                # Images & Backgrounds
 ├── index.html             # Profile & Hardware (Home)
 ├── settings.html          # CS2 Config & Keyboard
-├── script.js              # SPA Routing & UI Logic
+├── faq.html               # FAQ
+├── script.js              # SPA routing & page UI
 ├── viewer-stats.js        # Visitor counter client (polls /api/visitors)
 ├── styles.css             # Visual Styles
 ├── config.cfg             # Source of Truth (CS2 config)
 ├── vercel.json            # Vercel deployment config
 └── package.json           # Dependencies (@upstash/redis)
 ```
+
+## 🧪 Tests
+
+```bash
+npm ci
+npm test
+```
+
+GitHub Actions runs these tests for pull requests and pushes to `main`.
+API tests execute the production Lua script with simulated Redis commands;
+they do not connect to the live database.
 
 ## 🚀 Deployment
 
@@ -44,6 +68,7 @@ The website is powered by the `config.cfg` file.
 4. Add environment variables in Vercel project settings:
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
+   - `VISITOR_RESET_SECRET` (optional; leave unset to disable counter resets)
 5. Deploy!
 
 ## 📄 License

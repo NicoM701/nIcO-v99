@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet" />
-    <link rel="icon" type="image/png" href="assets/img/profile.png" />
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg" />
 
     <link rel="stylesheet" href="styles.css" />
 
@@ -19,18 +19,18 @@
 
 <body>
     <!-- Background -->
-    <div class="bg-overlay"></div>
     <div class="bg-video-wrap">
         <video class="bg-video" autoplay muted loop playsinline preload="metadata" poster="assets/bg/wavez-poster.jpg" aria-hidden="true">
             <source src="assets/bg/wavez.mp4" type="video/mp4" />
             <img src="assets/bg/wavez-poster.jpg" alt="" class="bg-video" />
         </video>
+        <div class="bg-overlay"></div>
     </div>
 
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-inner">
-            <a href="/" class="nav-left" style="text-decoration:none; color:inherit;">
+            <a href="/" class="nav-left">
                 <img src="assets/img/profile.png" alt="Avatar" class="nav-avatar" />
                 <span class="nav-brand">nIcO v99</span>
             </a>
@@ -59,8 +59,8 @@
             </div>
         </div>
 
-        <h1 class="settings-page-title" style="margin-top: 40px;">Keybinds</h1>
-        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">Hover over or tap highlighted keys
+        <h1 class="settings-page-title settings-page-title--spaced">Keybinds</h1>
+        <p class="keyboard-hint">Hover over or tap highlighted keys
             to see their bindings</p>
 
         <div class="keyboard-wrap" id="keyboardWrap">
@@ -83,7 +83,7 @@
         <p>© <span data-copyright-year>2025–2026</span> nIcO v99 — <a href="https://nicov99.vercel.app">nicov99.vercel.app</a></p>
     </footer>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
     <script src="viewer-stats.js"></script>
 </body>
 
