@@ -1,162 +1,118 @@
-/**
- * GET  /api/visitors — return total unique visitor-days + live count
- * POST /api/visitors — register a visit (cookieless, daily-salted IP hash)
- * DELETE /api/visitors — reset counter (requires VISITOR_RESET_SECRET header)
- *
- * Privacy-friendly: no cookies, no persistent IP storage.
- * Uses a daily-rotating salt so IP hashes can't be correlated across days.
- * `total` counts unique visitor-days (same IP on a new UTC day increments again).
- * Seen fingerprints live in `nv99:seen_visitors:YYYY-MM-DD` keys with a 48h TTL.
- *
- * Env vars:
- *   UPSTASH_REDIS_REST_URL
- *   UPSTASH_REDIS_REST_TOKEN
- *   VISITOR_RESET_SECRET (for reset endpoint)
- */
-
+/** Cookieless, pseudonymous visitor-day counting. See README for key/migration guarantees. */
 import { Redis } from '@upstash/redis';
-import {
-  LIVE_SET_KEY,
-  LIVE_TTL,
-  SEEN_KEY,
-  SEEN_TTL_SECONDS,
-  TOTAL_KEY,
-  parseScanResult,
-  seenKeyForDay,
-  seenKeyMatchPattern,
-  utcDay,
-} from '../js/visitor-logic.js';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { LIVE_SET_KEY, LIVE_TTL, SEEN_KEY, SEEN_TTL_SECONDS, TOTAL_KEY, utcDay } from '../js/visitor-logic.js';
 
-// Redis executes this without interleaving requests. Read membership before any
-// writes, and increment before recording a new fingerprint so a failed INCR
-// cannot consume the visit. SADD and EXPIRE cannot be split by a network failure.
+export const GENERATION_KEY = 'nv99:visitor_generation';
+
+// EVAL serializes visits, snapshots and resets. Old generation sets expire.
 export const REGISTER_VISIT_SCRIPT = `
-local seen = redis.call('SISMEMBER', KEYS[1], ARGV[1])
-local legacy = redis.call('SISMEMBER', KEYS[2], ARGV[1])
-local legacyTtl = redis.call('TTL', KEYS[2])
-if legacyTtl == -1 then
-  redis.call('EXPIRE', KEYS[2], ARGV[2])
+local generation = redis.call('GET', KEYS[4]) or ''
+if generation ~= ARGV[10] then return {-2, 0} end
+local dayKey = KEYS[5]
+local rateKey = KEYS[6]
+local requests = redis.call('INCR', rateKey)
+redis.call('EXPIRE', rateKey, 120)
+if requests > 120 then return {-1, 0} end
+local total = redis.call('GET', KEYS[1]) or '0'
+if ARGV[4] == 'POST' then
+  local seen = redis.call('SISMEMBER', dayKey, ARGV[1])
+  local legacy = 0
+  if generation == '' then
+    legacy = redis.call('SISMEMBER', KEYS[2], ARGV[2])
+    if redis.call('SISMEMBER', dayKey, ARGV[2]) == 1 then legacy = 1 end
+    if redis.call('TTL', KEYS[2]) == -1 then redis.call('EXPIRE', KEYS[2], ARGV[8]) end
+  end
+  if seen == 0 and legacy == 0 then total = redis.call('INCR', KEYS[1]) end
+  redis.call('SADD', dayKey, ARGV[1])
+  redis.call('EXPIRE', dayKey, ARGV[8])
 end
-if seen == 0 and legacy == 0 then
-  redis.call('INCR', KEYS[3])
-end
-redis.call('SADD', KEYS[1], ARGV[1])
-redis.call('EXPIRE', KEYS[1], ARGV[2])
+redis.call('ZADD', KEYS[3], ARGV[5], ARGV[1])
+redis.call('ZREMRANGEBYSCORE', KEYS[3], '-inf', ARGV[6])
+redis.call('EXPIRE', KEYS[3], ARGV[9])
+local live = redis.call('ZCOUNT', KEYS[3], ARGV[6], ARGV[5])
+return {total, live}
+`;
+
+export const RESET_VISIT_SCRIPT = `
+redis.call('MSET', KEYS[1], 0, KEYS[4], ARGV[1])
+redis.call('DEL', KEYS[3])
+if redis.call('TTL', KEYS[2]) == -1 then redis.call('EXPIRE', KEYS[2], ARGV[2]) end
 return 1
 `;
 
-let defaultHandler;
-export default async function handler(req, res) {
-  defaultHandler ??= createVisitorHandler(new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  }));
-  return defaultHandler(req, res);
+export function clientIp(req) {
+  // Vercel overwrites XFF. Other hosts need their own trusted proxy policy.
+  return (typeof req.headers['x-forwarded-for'] === 'string' && req.headers['x-forwarded-for'].split(',')[0].trim())
+    || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
 }
 
-/**
- * Create a privacy-safe fingerprint from IP + daily salt.
- * The salt rotates daily so hashes can't be correlated long-term.
- */
-async function getFingerprint(req, today = utcDay()) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    || req.headers['x-real-ip']
-    || req.socket?.remoteAddress
-    || 'unknown';
-
-  const raw = `${ip}:${today}:nv99salt`;
-
-  const encoder = new TextEncoder();
-  const data = encoder.encode(raw);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+export function fingerprints(ip, day, key) {
+  if (typeof key !== 'string' || !key.trim()) throw new Error('Visitor hashing key unavailable');
+  return {
+    current: createHmac('sha256', key).update(`nv99:visitor:${day}:${ip}`).digest('hex'),
+    legacy: createHash('sha256').update(`${ip}:${day}:nv99salt`).digest('hex'),
+  };
 }
 
-export function createVisitorHandler(redis, getResetSecret = () => process.env.VISITOR_RESET_SECRET) {
+function authorized(secret, expected) {
+  if (typeof expected !== 'string' || !expected.trim() || typeof secret !== 'string') return false;
+  const digest = value => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(secret), digest(expected));
+}
+
+export function createVisitorHandler(redis, getResetSecret = () => process.env.VISITOR_RESET_SECRET,
+  getHashKey = () => [process.env.VISITOR_HASH_SECRET, getResetSecret(), process.env.UPSTASH_REDIS_REST_TOKEN]
+    .find(key => typeof key === 'string' && key.trim())) {
+  const keys = [TOTAL_KEY, SEEN_KEY, LIVE_SET_KEY, GENERATION_KEY];
   return async function handleVisitorRequest(req, res) {
+    res.setHeader('Cache-Control', 'no-store');
     try {
-      const method = req.method;
-
-      if (method === 'POST') {
-        const today = utcDay();
-        const fp = await getFingerprint(req, today);
-        const dayKey = seenKeyForDay(today);
-
-        await redis.eval(
-          REGISTER_VISIT_SCRIPT,
-          [dayKey, SEEN_KEY, TOTAL_KEY],
-          [fp, SEEN_TTL_SECONDS],
-        );
-        await touchLiveVisitor(fp);
-
-        const [total, live] = await Promise.all([
-          redis.get(TOTAL_KEY),
-          countLive(),
-        ]);
-
-        return res.json({ total: Number(total || 0), live });
-      }
-
-      if (method === 'GET') {
-        const fp = await getFingerprint(req);
-        await touchLiveVisitor(fp);
-
-        const [total, live] = await Promise.all([
-          redis.get(TOTAL_KEY),
-          countLive(),
-        ]);
-        return res.json({ total: Number(total || 0), live });
-      }
-
-      if (method === 'DELETE') {
-        const secret = req.headers['x-reset-secret'];
-        const expectedSecret = getResetSecret();
-        if (typeof expectedSecret !== 'string' || !expectedSecret.trim() || secret !== expectedSecret) {
-          return res.status(403).json({ error: 'Forbidden' });
-        }
-        await Promise.all([
-          redis.set(TOTAL_KEY, 0),
-          deleteMatchingKeys(seenKeyMatchPattern()),
-          redis.del(LIVE_SET_KEY),
-        ]);
+      if (req.method === 'DELETE') {
+        if (!authorized(req.headers['x-reset-secret'], getResetSecret())) return res.status(403).json({ error: 'Forbidden' });
+        await redis.eval(RESET_VISIT_SCRIPT, keys, [randomUUID(), SEEN_TTL_SECONDS]);
         return res.json({ reset: true, total: 0, live: 0 });
       }
-
-      res.setHeader('Allow', 'GET, POST, DELETE');
-      return res.status(405).json({ error: 'Method not allowed' });
-    } catch (err) {
-      console.error('Visitor API error:', err);
-      return res.json({ total: '—', live: 0 });
+      if (req.method !== 'GET' && req.method !== 'POST') {
+        res.setHeader('Allow', 'GET, POST, DELETE');
+        return res.status(405).json({ error: 'Method not allowed' });
+      }
+      const now = Date.now();
+      const day = utcDay(new Date(now));
+      const fp = fingerprints(clientIp(req), day, getHashKey());
+      let snapshot;
+      // Declare every accessed key to Redis. A reset between GET and EVAL
+      // returns a sentinel before writes, then retries against the new generation.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const generation = String(await redis.get(GENERATION_KEY) || '');
+        const dayKey = `${SEEN_KEY}:${day}${generation ? `:${generation}` : ''}`;
+        const rateKey = `nv99:visitor_rate:${fp.current}:${Math.floor(now / 60000)}`;
+        snapshot = await redis.eval(REGISTER_VISIT_SCRIPT, [...keys, dayKey, rateKey],
+          [fp.current, fp.legacy, day, req.method, now, now - LIVE_TTL * 1000, Math.floor(now / 60000), SEEN_TTL_SECONDS, LIVE_TTL * 2, generation]);
+        if (Number(snapshot[0]) !== -2) break;
+      }
+      const [total, live] = snapshot;
+      if (Number(total) === -1) {
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'Too many requests' });
+      }
+      const stats = { total: Number(total), live: Number(live) };
+      if (!Object.values(stats).every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Invalid stats');
+      return res.json(stats);
+    } catch {
+      console.error('Visitor API unavailable');
+      return res.status(503).json({ error: 'Visitor stats unavailable' });
     }
   };
+}
 
-  async function deleteMatchingKeys(match) {
-    let cursor = '0';
-    do {
-      const scanned = parseScanResult(await redis.scan(cursor, { match, count: 100 }));
-      cursor = scanned.cursor;
-      if (scanned.keys.length) {
-        await redis.del(...scanned.keys);
-      }
-    } while (cursor !== '0');
-  }
-
-  async function touchLiveVisitor(fingerprint) {
-    const now = Date.now();
-    await redis.zadd(LIVE_SET_KEY, { score: now, member: fingerprint });
-  }
-
-  async function countLive() {
-    try {
-      const now = Date.now();
-      const cutoff = now - (LIVE_TTL * 1000);
-
-      await redis.zremrangebyscore(LIVE_SET_KEY, 0, cutoff);
-      const count = await redis.zcount(LIVE_SET_KEY, cutoff, now);
-      return Number(count || 0);
-    } catch {
-      return 0;
-    }
+let defaultHandler;
+export default async function handler(req, res) {
+  try {
+    defaultHandler ??= createVisitorHandler(new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN }));
+    return await defaultHandler(req, res);
+  } catch {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(503).json({ error: 'Visitor stats unavailable' });
   }
 }

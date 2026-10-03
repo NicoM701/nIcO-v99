@@ -119,6 +119,7 @@ export function initHeroAffiliates(options = {}) {
   let dragStartRenderedIndex = firstRenderedIndex;
   let dragDirection = null;
   let dragMoved = false;
+  let suppressPointerClick = false;
 
   const clearLoopReset = () => {
     if (loopResetTimeout) {
@@ -331,6 +332,7 @@ export function initHeroAffiliates(options = {}) {
     dragStartRenderedIndex = currentRenderedIndex;
     dragDirection = null;
     dragMoved = false;
+    suppressPointerClick = false;
     viewport.classList.add('is-pointer-down');
     stopAutoplay();
   }, { signal });
@@ -376,6 +378,7 @@ export function initHeroAffiliates(options = {}) {
       }
     }
 
+    suppressPointerClick = dragMoved;
     resetDrag();
     startAutoplay();
   }, { signal });
@@ -387,10 +390,10 @@ export function initHeroAffiliates(options = {}) {
   }, { signal });
 
   viewport.addEventListener('click', (event) => {
-    if (dragMoved) {
+    if (suppressPointerClick && event.detail !== 0) {
       event.preventDefault();
       event.stopPropagation();
-      resetDrag();
+      suppressPointerClick = false;
     }
   }, { capture: true, signal });
 

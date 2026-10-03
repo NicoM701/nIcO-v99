@@ -17,8 +17,11 @@
   let liveUsers = 0;
   let pollTimeout = null;
   let activeFetchController = null;
-  let registerPromise = null;
-  let isPolling = false;
+  let pending = false;
+  let registered = false;
+  let registerAttempts = 0;
+  let generation = 0;
+  let pageActive = true;
 
   const fmt = (n) => {
     if (n === null || n === undefined || n === '—') return '—';
@@ -69,7 +72,8 @@
         cache: 'no-store',
         signal: controller.signal
       });
-      return res;
+      if (!res.ok) return null;
+      return await res.json();
     } finally {
       window.clearTimeout(timeoutId);
       if (activeFetchController === controller) {
@@ -78,24 +82,26 @@
     }
   }
 
-  async function syncStats(method) {
+  async function syncStats(method, currentGeneration) {
     try {
-      const res = await fetchWithTimeout('/api/visitors', { method });
-      if (!res || !res.ok) return;
-
-      const data = await res.json();
+      const data = await fetchWithTimeout('/api/visitors', { method });
+      if (currentGeneration !== generation || !data
+        || !Number.isSafeInteger(data.total) || data.total < 0
+        || !Number.isSafeInteger(data.live) || data.live < 0) return false;
       totalVisitors = data.total;
       liveUsers = data.live || 0;
       updateDisplay();
+      return true;
     } catch (err) {
       if (err.name !== 'AbortError') {
         // Expected network failures from blocked/offline clients stay silent in production.
       }
     }
+    return false;
   }
 
   function stopPolling() {
-    isPolling = false;
+    generation++;
     if (pollTimeout) {
       window.clearTimeout(pollTimeout);
       pollTimeout = null;
@@ -106,51 +112,43 @@
     }
   }
 
-  function scheduleNextPoll() {
-    if (!isPolling || document.visibilityState === 'hidden') return;
-    const delay = POLL_INTERVAL_MS + Math.floor(Math.random() * POLL_JITTER_MS);
-    pollTimeout = window.setTimeout(async () => {
-      await syncStats('GET');
-      scheduleNextPoll();
-    }, delay);
-  }
-
   async function startPolling() {
-    if (isPolling || document.visibilityState === 'hidden') return;
-    isPolling = true;
-    await syncStats('GET');
-    scheduleNextPoll();
-  }
-
-  function handleVisibilityChange() {
-    if (document.visibilityState === 'hidden') {
-      stopPolling();
+    if (!pageActive || pending || pollTimeout || document.visibilityState === 'hidden') return;
+    pending = true;
+    const currentGeneration = generation;
+    const method = !registered && registerAttempts < 3 ? 'POST' : 'GET';
+    const success = await syncStats(method, currentGeneration);
+    pending = false;
+    if (currentGeneration !== generation) {
+      // A hide abort does not consume a retry. Resume only after it settles.
+      startPolling();
       return;
     }
-
-    if (registerPromise) {
-      registerPromise.finally(() => startPolling());
-      return;
+    if (method === 'POST') {
+      registerAttempts++;
+      registered = success;
     }
-
-    startPolling();
+    if (document.visibilityState === 'hidden') return;
+    const delay = !registered && registerAttempts < 3
+      ? 1000 * registerAttempts
+      : POLL_INTERVAL_MS + Math.floor(Math.random() * POLL_JITTER_MS);
+    pollTimeout = window.setTimeout(() => {
+      pollTimeout = null;
+      startPolling();
+    }, delay);
   }
 
   function init() {
     createPill();
     updateDisplay();
 
-    if (!registerPromise) {
-      registerPromise = syncStats('POST');
-    }
-
-    registerPromise.finally(() => {
-      if (document.visibilityState !== 'hidden') {
-        startPolling();
-      }
+    startPolling();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') stopPolling();
+      else { if (pollTimeout) window.clearTimeout(pollTimeout); pollTimeout = null; startPolling(); }
     });
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', () => { pageActive = false; stopPolling(); });
+    window.addEventListener('pageshow', () => { pageActive = true; startPolling(); });
   }
 
   function scheduleInit() {
