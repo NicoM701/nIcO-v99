@@ -3,3 +3,5 @@ README.md
 data/
 tests/
 .github/
+# Archived source media; the site uses wavez.mp4 and wavez-poster.jpg.
+assets/bg/wavez.gif
